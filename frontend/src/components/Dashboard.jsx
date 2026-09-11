@@ -326,7 +326,7 @@ export default function Dashboard({ user, onLogout }) {
         <div className="field"><label>Team<select value={technicianForm.teamCategory} onChange={(e) => setTechnicianForm({ ...technicianForm, teamCategory: e.target.value })}><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & Installation</option></select></label></div>
         <div className="drawer-actions"><button type="button" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>Cancel</button><button className="primary">{editingTechnician ? 'Save changes' : 'Create account'}</button></div>
       </form></div>}
-      {user.role === 'ADMIN' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
+      {user.role === 'ADMIN' && activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" />Home</button>
         {user.role === 'ADMIN' && <button className={activeView === 'messages' ? 'active' : ''} onClick={() => setActiveView('messages')}><NavIcon name="messages" />Messages</button>}
