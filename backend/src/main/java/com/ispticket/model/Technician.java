@@ -22,6 +22,9 @@ public class Technician {
 
     private String phone;
 
+    @Transient
+    private String username;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "team_id", nullable = false)
     private Team team;

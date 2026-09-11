@@ -63,6 +63,31 @@ public class AuthService {
         user.setPasswordHash(encoder.encode(password));
         users.save(user);
     }
+    public void updateTechnicianUsername(Long technicianId, String username) {
+        AppUser user = users.findAll().stream()
+                .filter(candidate -> technicianId.equals(candidate.getTechnicianId()))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Technician account not found"));
+        users.findByUsernameIgnoreCase(username).filter(existing -> !existing.getId().equals(user.getId()))
+                .ifPresent(existing -> { throw new IllegalArgumentException("Username already exists"); });
+        user.setUsername(username.trim());
+        users.save(user);
+    }
+    public String usernameForTechnician(Long technicianId) {
+        return users.findAll().stream()
+                .filter(candidate -> technicianId.equals(candidate.getTechnicianId()))
+                .map(AppUser::getUsername)
+                .findFirst()
+                .orElse(null);
+    }
+    public void deleteTechnicianAccount(Long technicianId) {
+        AppUser user = users.findAll().stream()
+                .filter(candidate -> technicianId.equals(candidate.getTechnicianId()))
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Technician account not found"));
+        sessions.deleteByUserId(user.getId());
+        users.delete(user);
+    }
     public void ensureAdmin() {
         if (users.findByUsernameIgnoreCase("admin").isEmpty())
             users.save(new AppUser("admin", encoder.encode("admin123"), Role.ADMIN));

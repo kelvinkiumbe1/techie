@@ -5,6 +5,7 @@ import com.ispticket.exception.NotFoundException;
 import com.ispticket.model.Team;
 import com.ispticket.model.Technician;
 import com.ispticket.repository.TeamRepository;
+import com.ispticket.repository.TicketRepository;
 import com.ispticket.repository.TechnicianRepository;
 import com.ispticket.model.AppUser;
 import com.ispticket.model.enums.Role;
@@ -24,11 +25,12 @@ public class TechnicianController {
     private final TechnicianRepository technicianRepository;
     private final TeamRepository teamRepository;
     private final AuthService authService;
+    private final TicketRepository ticketRepository;
 
     @GetMapping
     public List<Technician> getAll(@RequestHeader(value = "X-Auth-Token", required = false) String token) {
         authService.authenticate(token);
-        return technicianRepository.findAll();
+        return technicianRepository.findAll().stream().peek(tech -> tech.setUsername(authService.usernameForTechnician(tech.getId()))).toList();
     }
 
     @GetMapping("/me")
@@ -73,6 +75,8 @@ public class TechnicianController {
         if (request.getName() != null && !request.getName().isBlank()) tech.setName(request.getName().trim());
         if (request.getPhone() != null) tech.setPhone(request.getPhone().trim());
         if (request.getStatus() != null) tech.setStatus(request.getStatus());
+        if (request.getUsername() != null && !request.getUsername().isBlank())
+            authService.updateTechnicianUsername(id, request.getUsername());
         if (request.getTeamCategory() != null) {
             Team team = teamRepository.findByCategory(request.getTeamCategory())
                     .orElseThrow(() -> new NotFoundException("No team for category " + request.getTeamCategory()));
@@ -88,6 +92,20 @@ public class TechnicianController {
         requireAdmin(token);
         if (technicianRepository.findById(id).isEmpty()) throw new NotFoundException("Technician " + id + " not found");
         authService.resetTechnicianPassword(id, request.getPassword());
+    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(@RequestHeader(value = "X-Auth-Token", required = false) String token,
+                       @PathVariable Long id) {
+        requireAdmin(token);
+        Technician tech = technicianRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Technician " + id + " not found"));
+        var assignedTickets = ticketRepository.findByAssignedTechnicianId(id);
+        assignedTickets.forEach(ticket -> ticket.setAssignedTechnician(null));
+        ticketRepository.saveAll(assignedTickets);
+        authService.deleteTechnicianAccount(id);
+        technicianRepository.delete(tech);
     }
 
     private void requireAdmin(String token) {

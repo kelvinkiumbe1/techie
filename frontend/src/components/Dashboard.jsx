@@ -34,6 +34,8 @@ export default function Dashboard({ user, onLogout }) {
   const [avatar, setAvatar] = useState(() => localStorage.getItem('isp_avatar') || '')
   const [notifications, setNotifications] = useState(() => localStorage.getItem('isp_notifications') === 'true')
   const [showTechnicianForm, setShowTechnicianForm] = useState(false)
+  const [editingTechnician, setEditingTechnician] = useState(null)
+  const [openTechnicianMenu, setOpenTechnicianMenu] = useState(null)
   const [technicianForm, setTechnicianForm] = useState({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
   const [technicianError, setTechnicianError] = useState('')
   const [search, setSearch] = useState('')
@@ -113,12 +115,31 @@ export default function Dashboard({ user, onLogout }) {
     await api.updateTechnician(tech.id, { status: tech.status === 'OFF' ? 'AVAILABLE' : 'OFF' })
     load()
   }
+  function openTechnicianEditor(tech) {
+    setOpenTechnicianMenu(null)
+    setTechnicianError('')
+    setEditingTechnician(tech)
+    setTechnicianForm({ name: tech.name, phone: tech.phone || '', username: tech.username || '', password: '', teamCategory: tech.team?.category || tech.teamCategory || 'SUPPORT' })
+    setShowTechnicianForm(true)
+  }
+  async function handleDeleteTechnician(tech) {
+    setOpenTechnicianMenu(null)
+    if (!window.confirm(`Delete ${tech.name}'s account? Assigned tickets will be unassigned.`)) return
+    await api.deleteTechnician(tech.id)
+    load()
+  }
   async function handleCreateTechnician(e) {
     e.preventDefault()
     setTechnicianError('')
     try {
-      await api.createTechnician(technicianForm)
+      if (editingTechnician) {
+        await api.updateTechnician(editingTechnician.id, { name: technicianForm.name, phone: technicianForm.phone, teamCategory: technicianForm.teamCategory, username: technicianForm.username })
+        if (technicianForm.password) await api.resetTechnicianPassword(editingTechnician.id, technicianForm.password)
+      } else {
+        await api.createTechnician(technicianForm)
+      }
       setTechnicianForm({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
+      setEditingTechnician(null)
       setShowTechnicianForm(false)
       load()
     } catch (err) {
@@ -252,13 +273,20 @@ export default function Dashboard({ user, onLogout }) {
               <span><strong>{workRate.resolutionRate}%</strong> resolution rate</span>
             </div>}
             <div className="technician-list">
-              <div className="admin-subheader"><h3>Technician workload</h3><button className="primary small-button" onClick={() => { setTechnicianError(''); setShowTechnicianForm(true) }}>+ Create technician account</button></div>
+              <div className="admin-subheader"><h3>Technician workload</h3>{activeView === 'technicians' && <button className="primary small-button" onClick={() => { setTechnicianError(''); setEditingTechnician(null); setShowTechnicianForm(true) }}>+ Create technician account</button>}</div>
               {(workRate.technicianMetrics || []).map((metric) => {
                 const tech = technicians.find((item) => item.id === metric.technicianId)
                 return <div className="technician-row" key={metric.technicianId}>
                   <span><strong>{metric.name}</strong> <small>{metric.teamCategory}</small></span>
                   <span>{metric.pendingTickets} pending · {metric.resolvedTickets} resolved · {metric.resolutionRate}% rate</span>
-                  {tech && <button onClick={() => handleTechStatus(tech)}>{metric.status === 'OFF' ? 'Enable' : 'Disable'}</button>}
+                  {tech && <div className="technician-actions">
+                    <button className="technician-menu-trigger" onClick={() => setOpenTechnicianMenu(openTechnicianMenu === tech.id ? null : tech.id)} aria-label={`Actions for ${tech.name}`}>•••</button>
+                    {openTechnicianMenu === tech.id && <div className="technician-menu">
+                      <button onClick={() => openTechnicianEditor(tech)}>Edit credentials</button>
+                      <button onClick={() => { setOpenTechnicianMenu(null); handleTechStatus(tech) }}>{metric.status === 'OFF' ? 'Enable account' : 'Disable account'}</button>
+                      <button className="danger-action" onClick={() => handleDeleteTechnician(tech)}>Delete account</button>
+                    </div>}
+                  </div>}
                 </div>
               })}
               </div>
@@ -274,14 +302,14 @@ export default function Dashboard({ user, onLogout }) {
         <div className="drawer-actions"><button onClick={() => { setFieldTicket(null); setFieldNote('') }}>Cancel</button><button className="primary" onClick={handleFieldUpdate} disabled={!fieldNote.trim()}>Save update</button></div>
       </section></div>}
       {showTechnicianForm && <div className="drawer-backdrop"><form className="drawer" onSubmit={handleCreateTechnician}>
-        <h2>Create technician account</h2><p className="drawer-sub">Create login details and place the technician on the correct team.</p>
+        <h2>{editingTechnician ? 'Edit technician account' : 'Create technician account'}</h2><p className="drawer-sub">{editingTechnician ? 'Update profile details or credentials.' : 'Create login details and place the technician on the correct team.'}</p>
         {technicianError && <div className="form-error">{technicianError}</div>}
         <div className="field"><label>Full name<input required value={technicianForm.name} onChange={(e) => setTechnicianForm({ ...technicianForm, name: e.target.value })} placeholder="e.g. Alex Kamau" /></label></div>
         <div className="field"><label>Phone number<input value={technicianForm.phone} onChange={(e) => setTechnicianForm({ ...technicianForm, phone: e.target.value })} placeholder="Optional" /></label></div>
         <div className="field"><label>Username<input required value={technicianForm.username} onChange={(e) => setTechnicianForm({ ...technicianForm, username: e.target.value })} placeholder="Login username" /></label></div>
-        <div className="field"><label>Temporary password<input required minLength="6" type="password" value={technicianForm.password} onChange={(e) => setTechnicianForm({ ...technicianForm, password: e.target.value })} placeholder="At least 6 characters" /></label></div>
+        <div className="field"><label>{editingTechnician ? 'New password (optional)' : 'Temporary password'}<input required={!editingTechnician} minLength="6" type="password" value={technicianForm.password} onChange={(e) => setTechnicianForm({ ...technicianForm, password: e.target.value })} placeholder={editingTechnician ? 'Leave blank to keep current password' : 'At least 6 characters'} /></label></div>
         <div className="field"><label>Team<select value={technicianForm.teamCategory} onChange={(e) => setTechnicianForm({ ...technicianForm, teamCategory: e.target.value })}><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & Installation</option></select></label></div>
-        <div className="drawer-actions"><button type="button" onClick={() => setShowTechnicianForm(false)}>Cancel</button><button className="primary">Create account</button></div>
+        <div className="drawer-actions"><button type="button" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>Cancel</button><button className="primary">{editingTechnician ? 'Save changes' : 'Create account'}</button></div>
       </form></div>}
       {user.role === 'ADMIN' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       <nav className="mobile-nav" aria-label="Mobile navigation">

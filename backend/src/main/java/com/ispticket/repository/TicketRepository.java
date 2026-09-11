@@ -14,4 +14,5 @@ public interface TicketRepository extends JpaRepository<Ticket, Long> {
     List<Ticket> findByStatusNotOrderByCreatedAtDesc(Status excludedStatus);
 
     List<Ticket> findByAssignedTechnicianIdAndStatusNotOrderByCreatedAtAsc(Long technicianId, Status excludedStatus);
+    List<Ticket> findByAssignedTechnicianId(Long technicianId);
 }

@@ -9,4 +9,5 @@ import java.util.Optional;
 public interface AppSessionRepository extends JpaRepository<AppSession, Long> {
     Optional<AppSession> findByTokenHashAndExpiresAtAfter(String tokenHash, LocalDateTime now);
     void deleteByTokenHash(String tokenHash);
+    void deleteByUserId(Long userId);
 }

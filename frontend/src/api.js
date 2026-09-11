@@ -60,6 +60,7 @@ export const api = {
   resetTechnicianPassword: (id, password) => fetch(`${BASE}/technicians/${id}/reset-password`, {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify({ password }),
   }).then(handle),
+  deleteTechnician: (id) => fetch(`${BASE}/technicians/${id}`, { method: 'DELETE', headers: headers() }).then(handle),
   getWorkRate: (filters = {}) => {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value))
     return fetch(`${BASE}/admin/work-rate?${query}`, { headers: headers() }).then(handle)

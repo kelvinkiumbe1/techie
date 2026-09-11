@@ -12,4 +12,5 @@ public class TechnicianUpdateRequest {
     private String phone;
     private Category teamCategory;
     private TechStatus status;
+    private String username;
 }
