@@ -1,0 +1,18 @@
+{
+  "name": "Techie Tracker - Ticket Dispatch",
+  "short_name": "Techie Tracker",
+  "description": "Customer request dispatch for support and fiber teams.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fefbf3",
+  "theme_color": "#4e0401",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -1,0 +1,51 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: isp-ticket-system
+
+  # --- Default: H2 in-memory, zero setup, resets on every restart ---
+  datasource:
+    url: jdbc:h2:mem:ispdb;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  # --- To switch to Postgres later, comment out the H2 block above and use this instead: ---
+  # datasource:
+  #   url: jdbc:postgresql://localhost:5432/isp_ticket_db
+  #   driver-class-name: org.postgresql.Driver
+  #   username: postgres
+  #   password: yourpassword
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+    defer-datasource-initialization: true
+
+  sql:
+    init:
+      mode: always
+
+  servlet:
+    multipart:
+      max-file-size: 25MB
+      max-request-size: 25MB
+
+# Ticket auto-escalates (turns urgent/overdue) after this many minutes with no assignment
+ticket:
+  escalation:
+    unassigned-minutes: 60
+    in-progress-stale-minutes: 240
+
+uploads:
+  directory: ${UPLOADS_DIRECTORY:uploads}
