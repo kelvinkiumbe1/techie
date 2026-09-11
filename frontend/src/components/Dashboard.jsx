@@ -317,7 +317,6 @@ export default function Dashboard({ user, onLogout }) {
         <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" />Tickets</button>
         {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" />Staff</button>}
         {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" />Reports</button>}
-        <button onClick={() => setShowProfile(true)}><NavIcon name="profile" />Profile</button>
       </nav>
     </div>
     </div>

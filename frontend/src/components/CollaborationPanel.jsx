@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { api } from '../api.js'
+import { api, API_ORIGIN } from '../api.js'
 
 const rtcConfig = { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
 
@@ -153,8 +153,8 @@ export default function CollaborationPanel({ ticket, onClose }) {
   }
 
   return <aside className="collaboration-panel">
-    <div className="collab-header"><div><strong>Ticket #{ticket.id}</strong><div className="ticket-meta">{ticket.customerName}</div></div><button onClick={onClose}>Close</button></div>
-    <div className="collab-messages">{messages.map(m => <div className="message" key={m.id}><strong>{m.author}</strong><span>{m.createdAt && new Date(m.createdAt).toLocaleString()}</span><p>{m.note}</p>{m.attachmentUrl && <a href={`http://localhost:8082${m.attachmentUrl}`} target="_blank" rel="noreferrer">{m.attachmentName || 'Attachment'}</a>}</div>)}</div>
+    <div className="collab-header"><div><strong>{ticket.assignedTechnicianName ? 'Contact technician' : 'Ticket collaboration'}</strong><div className="ticket-meta">Ticket #{ticket.id} · {ticket.customerName}{ticket.assignedTechnicianName ? ` · ${ticket.assignedTechnicianName}` : ''}</div></div><button onClick={onClose}>Close</button></div>
+    <div className="collab-messages">{messages.map(m => <div className="message" key={m.id}><strong>{m.author}</strong><span>{m.createdAt && new Date(m.createdAt).toLocaleString()}</span><p>{m.note}</p>{m.attachmentUrl && <a href={`${API_ORIGIN}${m.attachmentUrl}`} target="_blank" rel="noreferrer">{m.attachmentName || 'Attachment'}</a>}</div>)}</div>
     {callState !== 'idle' && <div className="call-media"><video ref={localVideo} autoPlay muted playsInline /><video ref={remoteVideo} autoPlay playsInline /></div>}
     {camera && <video className="camera-preview" ref={localVideo} autoPlay muted playsInline />}
     {callError && <small className="error">{callError}</small>}

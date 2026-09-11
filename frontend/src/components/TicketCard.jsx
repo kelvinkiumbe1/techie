@@ -52,7 +52,7 @@ export default function TicketCard({ ticket, technicians, onAssign, onStatusChan
       {ticket.description && <div className="ticket-meta">{ticket.description}</div>}
 
       <div className="ticket-actions">
-        <button onClick={() => onCollaborate(ticket)}>Chat / call</button>
+        <button onClick={() => onCollaborate(ticket)}>{ticket.assignedTechnicianName ? 'Message / call technician' : 'Open ticket chat'}</button>
         {isAdmin && !['RESOLVED', 'CANCELLED'].includes(ticket.status) && (
           <>
             <select value={selectedTech} onChange={(e) => setSelectedTech(e.target.value)}>
