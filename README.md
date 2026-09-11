@@ -66,6 +66,20 @@ Open the URL it prints (usually http://localhost:5173). It talks to the
 backend at `localhost:8082` — that's hardcoded in `src/api.js` if you ever
 need to point it somewhere else (e.g. a real server instead of your laptop).
 
+### Testing on a phone on the same Wi-Fi
+
+The development server accepts LAN connections. Start the backend and
+frontend on the computer, then open the computer's IPv4 address on the phone:
+
+```text
+http://YOUR-COMPUTER-IP:5173
+```
+
+For example, this computer currently uses `http://10.0.40.164:5173`. Keep the
+phone and computer on the same network and allow Node.js and Java through
+Windows Firewall if prompted. The phone automatically uses the matching
+`http://YOUR-COMPUTER-IP:8082` API address.
+
 ## Deploying to production on Render
 
 The repository includes `render.yaml` for a Render Blueprint deployment:

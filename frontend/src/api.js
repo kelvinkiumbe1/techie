@@ -1,4 +1,7 @@
-export const API_ORIGIN = import.meta.env.VITE_API_URL || 'http://localhost:8082'
+const localApiOrigin = typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1'
+  ? `http://${window.location.hostname}:8082`
+  : 'http://localhost:8082'
+export const API_ORIGIN = import.meta.env.VITE_API_URL || localApiOrigin
 const BASE = `${API_ORIGIN}/api`
 let token = localStorage.getItem('isp_token')
 export function setToken(value) { token = value; if (value) localStorage.setItem('isp_token', value); else localStorage.removeItem('isp_token') }
