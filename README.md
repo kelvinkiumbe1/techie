@@ -66,6 +66,23 @@ Open the URL it prints (usually http://localhost:5173). It talks to the
 backend at `localhost:8082` — that's hardcoded in `src/api.js` if you ever
 need to point it somewhere else (e.g. a real server instead of your laptop).
 
+## Deploying to production on Render
+
+The repository includes `render.yaml` for a Render Blueprint deployment:
+
+1. In Render, choose **New → Blueprint** and connect the GitHub repository.
+2. Confirm the `techie-db`, `techie-api`, and `techie-frontend` services.
+3. Enter strong values for `ADMIN_USERNAME` and `ADMIN_PASSWORD` when Render
+   prompts for the secret environment variables.
+4. After the first deploy, confirm the frontend URL matches the `CORS_ORIGIN`
+   value on `techie-api`. Update it if Render assigned a different URL, then
+   redeploy the API.
+
+The production API uses PostgreSQL and the frontend receives its API host
+through `VITE_API_URL`. HTTPS is provided by Render. Uploaded files need a
+persistent disk or external object storage before relying on them in
+production; the default Render free service filesystem is temporary.
+
 ## A note on this build
 
 I (Claude) wrote and reviewed every file here carefully, but this sandbox

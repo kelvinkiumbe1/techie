@@ -1,4 +1,4 @@
-const BASE = 'http://localhost:8082/api'
+const BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:8082'}/api`
 let token = localStorage.getItem('isp_token')
 export function setToken(value) { token = value; if (value) localStorage.setItem('isp_token', value); else localStorage.removeItem('isp_token') }
 const headers = () => token ? { 'X-Auth-Token': token } : {}

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -23,6 +24,10 @@ public class AuthService {
     private final AppUserRepository users;
     private final AppSessionRepository sessions;
     private BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+    @Value("${app.admin.username:admin}")
+    private String adminUsername;
+    @Value("${app.admin.password:admin123}")
+    private String adminPassword;
     private static final long SESSION_HOURS = 12;
 
     public AuthResponse login(LoginRequest request) {
@@ -89,8 +94,8 @@ public class AuthService {
         users.delete(user);
     }
     public void ensureAdmin() {
-        if (users.findByUsernameIgnoreCase("admin").isEmpty())
-            users.save(new AppUser("admin", encoder.encode("admin123"), Role.ADMIN));
+        if (users.findByUsernameIgnoreCase(adminUsername).isEmpty())
+            users.save(new AppUser(adminUsername, encoder.encode(adminPassword), Role.ADMIN));
     }
 
     private String hashToken(String token) {
