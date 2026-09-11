@@ -6,6 +6,17 @@ import CollaborationPanel from './CollaborationPanel.jsx'
 
 const POLL_MS = 20000
 
+function NavIcon({ name }) {
+  const paths = {
+    home: <><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
+    tickets: <><path d="m3.173 8.18 11-5a2 2 0 0 1 2.647.993L18.56 8" /><path d="M6 10V8" /><path d="M6 14v1" /><path d="M6 19v2" /><rect x="2" y="8" width="20" height="13" rx="2" /></>,
+    staff: <><path d="M17 21a5 5 0 0 0-10 0" /><path d="M22 10.5a3.5 3.5 0 0 0-5.507-2.868" /><path d="M7.507 7.632A3.5 3.5 0 0 0 2 10.5" /><circle cx="12" cy="13" r="3" /><circle cx="18.5" cy="4.5" r="2.5" /><circle cx="5.5" cy="4.5" r="2.5" /></>,
+    reports: <><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 14h6" /></>,
+    profile: <><path d="m19 16-3 3" /><path d="M2 21a8 8 0 0 1 12.664-6.5" /><path d="M22 19h-6l3 3" /><circle cx="10" cy="8" r="5" /></>,
+  }
+  return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>
+}
+
 export default function Dashboard({ user, onLogout }) {
   const [tickets, setTickets] = useState([])
   const [technicians, setTechnicians] = useState([])
@@ -130,9 +141,9 @@ export default function Dashboard({ user, onLogout }) {
       <aside className="sidebar">
         <div className="sidebar-brand"><span className="brand-mark">TT</span><div><strong>Techie Tracker</strong><small>Dispatch workspace</small></div></div>
         <nav className="main-nav" aria-label="Main navigation">
-          <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><span>▦</span> Overview</button>
-          <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><span>✓</span> Tickets <b>{tickets.length}</b></button>
-          {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><span>♙</span> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><span>▥</span> Reports</button></>}
+          <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" /> Overview</button>
+          <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
+          {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button onClick={onLogout} aria-label="Sign out">↪</button></div>
@@ -274,11 +285,11 @@ export default function Dashboard({ user, onLogout }) {
       </form></div>}
       {user.role === 'ADMIN' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><span>▦</span>Home</button>
-        <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><span>✓</span>Tickets</button>
-        {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><span>♙</span>Staff</button>}
-        {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><span>▥</span>Reports</button>}
-        <button onClick={() => setShowProfile(true)}><span>●</span>Profile</button>
+        <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" />Home</button>
+        <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" />Tickets</button>
+        {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" />Staff</button>}
+        {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" />Reports</button>}
+        <button onClick={() => setShowProfile(true)}><NavIcon name="profile" />Profile</button>
       </nav>
     </div>
     </div>
