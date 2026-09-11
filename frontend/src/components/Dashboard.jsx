@@ -47,6 +47,11 @@ export default function Dashboard({ user, onLogout }) {
   useEffect(() => {
     sessionStorage.setItem('isp_active_view', activeView)
   }, [activeView])
+  function navigate(view) {
+    setDirectTechnician(null)
+    setCollaborationTicket(null)
+    setActiveView(view)
+  }
 
   const load = useCallback(async () => {
     try {
@@ -169,9 +174,9 @@ export default function Dashboard({ user, onLogout }) {
       <aside className="sidebar">
         <div className="sidebar-brand"><span className="brand-mark">TT</span><div><strong>Techie Tracker</strong><small>Dispatch workspace</small></div></div>
         <nav className="main-nav" aria-label="Main navigation">
-          <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" /> Overview</button>
-          <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
-          {user.role === 'ADMIN' && <><button className={activeView === 'messages' ? 'active' : ''} onClick={() => setActiveView('messages')}><NavIcon name="messages" /> Messages</button><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" /> Reports</button></>}
+          <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" /> Overview</button>
+          <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
+          {user.role === 'ADMIN' && <><button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" /> Messages</button><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button onClick={onLogout} aria-label="Sign out">↪</button></div>
@@ -332,11 +337,11 @@ export default function Dashboard({ user, onLogout }) {
       </form></div>}
       {user.role === 'ADMIN' && activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
-        <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" />Home</button>
-        {user.role === 'ADMIN' && <button className={activeView === 'messages' ? 'active' : ''} onClick={() => setActiveView('messages')}><NavIcon name="messages" />Messages</button>}
-        <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" />Tickets</button>
-        {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" />Staff</button>}
-        {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" />Reports</button>}
+        <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" />Home</button>
+        {user.role === 'ADMIN' && <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" />Messages</button>}
+        <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" />Tickets</button>
+        {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" />Staff</button>}
+        {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" />Reports</button>}
       </nav>
     </div>
     </div>

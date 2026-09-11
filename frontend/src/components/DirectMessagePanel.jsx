@@ -52,8 +52,10 @@ export default function DirectMessagePanel({ technician, onClose }) {
     </div>
     {error && <small className="error">{error}</small>}
     <form className="message-composer" onSubmit={send}>
-      <textarea rows="2" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} placeholder={`Message ${technician.name}…`} />
-      <div className="composer-actions"><button className="primary">Send message</button></div>
+      <div className="message-input-wrap">
+        <textarea rows="2" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} placeholder={`Message ${technician.name}…`} />
+        <button className="send-icon" aria-label="Send message" title="Send message">➤</button>
+      </div>
     </form>
   </aside>
 }
