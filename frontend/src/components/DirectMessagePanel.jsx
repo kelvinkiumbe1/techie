@@ -21,11 +21,11 @@ export default function DirectMessagePanel({ technician, onClose }) {
     } catch (err) {
       setError(err.message)
     }
-    function handleKeyDown(e) {
-      if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault()
-        send(e)
-      }
+  }
+  function handleKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send(e)
     }
   }
 

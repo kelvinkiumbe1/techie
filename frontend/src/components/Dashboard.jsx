@@ -31,7 +31,7 @@ export default function Dashboard({ user, onLogout }) {
   const [myTechnician, setMyTechnician] = useState(null)
   const [fieldTicket, setFieldTicket] = useState(null)
   const [fieldNote, setFieldNote] = useState('')
-  const [activeView, setActiveView] = useState('overview')
+  const [activeView, setActiveView] = useState(() => sessionStorage.getItem('isp_active_view') || 'overview')
   const [showProfile, setShowProfile] = useState(false)
   const [avatar, setAvatar] = useState(() => localStorage.getItem('isp_avatar') || '')
   const [notifications, setNotifications] = useState(() => localStorage.getItem('isp_notifications') === 'true')
@@ -43,6 +43,10 @@ export default function Dashboard({ user, onLogout }) {
   const [technicianError, setTechnicianError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+
+  useEffect(() => {
+    sessionStorage.setItem('isp_active_view', activeView)
+  }, [activeView])
 
   const load = useCallback(async () => {
     try {
