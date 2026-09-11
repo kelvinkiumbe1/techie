@@ -13,6 +13,7 @@ function NavIcon({ name }) {
     tickets: <><path d="m3.173 8.18 11-5a2 2 0 0 1 2.647.993L18.56 8" /><path d="M6 10V8" /><path d="M6 14v1" /><path d="M6 19v2" /><rect x="2" y="8" width="20" height="13" rx="2" /></>,
     staff: <><path d="M17 21a5 5 0 0 0-10 0" /><path d="M22 10.5a3.5 3.5 0 0 0-5.507-2.868" /><path d="M7.507 7.632A3.5 3.5 0 0 0 2 10.5" /><circle cx="12" cy="13" r="3" /><circle cx="18.5" cy="4.5" r="2.5" /><circle cx="5.5" cy="4.5" r="2.5" /></>,
     reports: <><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 14h6" /></>,
+    messages: <><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /><path d="M8 12h.01M12 12h.01M16 12h.01" /></>,
     profile: <><path d="m19 16-3 3" /><path d="M2 21a8 8 0 0 1 12.664-6.5" /><path d="M22 19h-6l3 3" /><circle cx="10" cy="8" r="5" /></>,
   }
   return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>
@@ -166,7 +167,7 @@ export default function Dashboard({ user, onLogout }) {
         <nav className="main-nav" aria-label="Main navigation">
           <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" /> Overview</button>
           <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
-          {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" /> Reports</button></>}
+          {user.role === 'ADMIN' && <><button className={activeView === 'messages' ? 'active' : ''} onClick={() => setActiveView('messages')}><NavIcon name="messages" /> Messages</button><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button onClick={onLogout} aria-label="Sign out">↪</button></div>
@@ -254,6 +255,16 @@ export default function Dashboard({ user, onLogout }) {
           </div>}
           </>
         )}
+        {activeView === 'messages' && user.role === 'ADMIN' && <section className="messages-view">
+         <div className="messages-view-header"><div><p className="eyebrow">Team communication</p><h2>Direct messages</h2><p className="intro-copy">Message a technician privately or contact them by phone or WhatsApp.</p></div></div>
+         <div className="direct-contact-list">
+           {technicians.map((tech) => <button className="direct-contact-card" key={tech.id} onClick={() => setDirectTechnician(tech)}>
+             <span className="direct-contact-avatar">{tech.name.slice(0, 1).toUpperCase()}</span>
+             <span><strong>{tech.name}</strong><small>{tech.team?.category || tech.teamCategory}{tech.phone ? ` · ${tech.phone}` : ''}</small></span>
+             <b>Message</b>
+           </button>)}
+         </div>
+        </section>}
         {workRate && user.role === 'ADMIN' && (activeView === 'overview' || activeView === 'reports' || activeView === 'technicians') && (
           <section className="admin-panel">
             <div className="admin-panel-header">
@@ -318,6 +329,7 @@ export default function Dashboard({ user, onLogout }) {
       {user.role === 'ADMIN' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <button className={activeView === 'overview' ? 'active' : ''} onClick={() => setActiveView('overview')}><NavIcon name="home" />Home</button>
+        {user.role === 'ADMIN' && <button className={activeView === 'messages' ? 'active' : ''} onClick={() => setActiveView('messages')}><NavIcon name="messages" />Messages</button>}
         <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => setActiveView('tickets')}><NavIcon name="tickets" />Tickets</button>
         {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => setActiveView('technicians')}><NavIcon name="staff" />Staff</button>}
         {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => setActiveView('reports')}><NavIcon name="reports" />Reports</button>}
