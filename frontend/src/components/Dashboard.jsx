@@ -172,7 +172,7 @@ export default function Dashboard({ user, onLogout }) {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="sidebar-brand"><span className="brand-mark">TT</span><div><strong>Techie Tracker</strong><small>Dispatch workspace</small></div></div>
+        <div className="sidebar-brand"><img className="brand-mark" src="/icons/icon.svg" alt="" /><div><strong>Techie Tracker</strong><small>Dispatch workspace</small></div></div>
         <nav className="main-nav" aria-label="Main navigation">
           <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" /> Overview</button>
           <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
