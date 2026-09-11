@@ -3,6 +3,7 @@ import { api } from '../api.js'
 import TicketQueue from './TicketQueue.jsx'
 import IntakeForm from './IntakeForm.jsx'
 import CollaborationPanel from './CollaborationPanel.jsx'
+import DirectMessagePanel from './DirectMessagePanel.jsx'
 
 const POLL_MS = 20000
 
@@ -36,6 +37,7 @@ export default function Dashboard({ user, onLogout }) {
   const [showTechnicianForm, setShowTechnicianForm] = useState(false)
   const [editingTechnician, setEditingTechnician] = useState(null)
   const [openTechnicianMenu, setOpenTechnicianMenu] = useState(null)
+  const [directTechnician, setDirectTechnician] = useState(null)
   const [technicianForm, setTechnicianForm] = useState({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
   const [technicianError, setTechnicianError] = useState('')
   const [search, setSearch] = useState('')
@@ -282,6 +284,7 @@ export default function Dashboard({ user, onLogout }) {
                   {tech && <div className="technician-actions">
                     <button className="technician-menu-trigger" onClick={() => setOpenTechnicianMenu(openTechnicianMenu === tech.id ? null : tech.id)} aria-label={`Actions for ${tech.name}`}>•••</button>
                     {openTechnicianMenu === tech.id && <div className="technician-menu">
+                      <button onClick={() => { setOpenTechnicianMenu(null); setDirectTechnician(tech) }}>Message / contact</button>
                       <button onClick={() => openTechnicianEditor(tech)}>Edit credentials</button>
                       <button onClick={() => { setOpenTechnicianMenu(null); handleTechStatus(tech) }}>{metric.status === 'OFF' ? 'Enable account' : 'Disable account'}</button>
                       <button className="danger-action" onClick={() => handleDeleteTechnician(tech)}>Delete account</button>
@@ -296,6 +299,7 @@ export default function Dashboard({ user, onLogout }) {
 
       {showIntake && <IntakeForm onClose={() => setShowIntake(false)} onCreated={handleCreate} />}
       {collaborationTicket && <CollaborationPanel ticket={collaborationTicket} onClose={() => setCollaborationTicket(null)} />}
+      {directTechnician && <DirectMessagePanel technician={directTechnician} onClose={() => setDirectTechnician(null)} />}
       {fieldTicket && <div className="drawer-backdrop"><section className="drawer">
         <h2>Field update</h2><p className="drawer-sub">{fieldTicket.customerName} · ticket #{fieldTicket.id}</p>
         <div className="field"><label>Work note</label><textarea value={fieldNote} onChange={(e) => setFieldNote(e.target.value)} placeholder="What did you find or change?" autoFocus /></div>

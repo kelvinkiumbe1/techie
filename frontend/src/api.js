@@ -62,6 +62,10 @@ export const api = {
     method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify({ password }),
   }).then(handle),
   deleteTechnician: (id) => fetch(`${BASE}/technicians/${id}`, { method: 'DELETE', headers: headers() }).then(handle),
+  getDirectMessages: (technicianId) => fetch(`${BASE}/direct-messages/${technicianId}`, { headers: headers() }).then(handle),
+  sendDirectMessage: (technicianId, message) => fetch(`${BASE}/direct-messages/${technicianId}`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify({ message }),
+  }).then(handle),
   getWorkRate: (filters = {}) => {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value))
     return fetch(`${BASE}/admin/work-rate?${query}`, { headers: headers() }).then(handle)
