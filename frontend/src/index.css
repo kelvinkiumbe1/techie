@@ -338,7 +338,7 @@ textarea:focus-visible {
   background: rgba(16, 35, 59, 0.35);
   display: flex;
   justify-content: flex-end;
-  z-index: 20;
+  z-index: 110;
 }
 
 .drawer {
