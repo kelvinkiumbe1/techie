@@ -180,7 +180,8 @@ export default function Dashboard({ user, onLogout }) {
         <nav className="main-nav" aria-label="Main navigation">
           <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" /> Overview</button>
           <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
-          {user.role === 'ADMIN' && <><button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" /> Messages</button><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
+          <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" /> Messages</button>
+          {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button onClick={onLogout} aria-label="Sign out">↪</button></div>
@@ -209,9 +210,9 @@ export default function Dashboard({ user, onLogout }) {
             <option value="AVAILABLE">Available</option><option value="BUSY">Busy</option><option value="OFF">Off duty</option>
           </select>
         </label>}
-        {user.role === 'ADMIN' && <button className="new-ticket-btn" onClick={() => setShowIntake(true)}>
+        <button className="new-ticket-btn" onClick={() => setShowIntake(true)}>
           + Log request
-        </button>}
+        </button>
       </div>
 
       <div className="main-content">
@@ -268,14 +269,20 @@ export default function Dashboard({ user, onLogout }) {
           </div>}
           </>
         )}
-        {activeView === 'messages' && user.role === 'ADMIN' && <section className="messages-view">
-         <div className="messages-view-header"><div><p className="eyebrow">Team communication</p><h2>Direct messages</h2><p className="intro-copy">Message a technician privately or contact them by phone or WhatsApp.</p></div></div>
+        {activeView === 'messages' && <section className="messages-view">
+         <div className="messages-view-header"><div><p className="eyebrow">Team communication</p><h2>{user.role === 'ADMIN' ? 'Direct messages' : 'Ticket messages'}</h2><p className="intro-copy">{user.role === 'ADMIN' ? 'Message a technician privately or contact them by phone or WhatsApp.' : 'Open a conversation on one of your assigned tickets.'}</p></div></div>
          <div className="direct-contact-list">
-           {technicians.map((tech) => <button className="direct-contact-card" key={tech.id} onClick={() => setDirectTechnician(tech)}>
-             <span className="direct-contact-avatar">{tech.name.slice(0, 1).toUpperCase()}</span>
-             <span><strong>{tech.name}</strong><small>{tech.team?.category || tech.teamCategory}{tech.phone ? ` · ${tech.phone}` : ''}</small></span>
-             <b>Message</b>
-           </button>)}
+           {(user.role === 'ADMIN' ? technicians : tickets.filter((ticket) => ticket.assignedTechnicianId)).map((item) => user.role === 'ADMIN'
+             ? <button className="direct-contact-card" key={item.id} onClick={() => setDirectTechnician(item)}>
+               <span className="direct-contact-avatar">{item.name.slice(0, 1).toUpperCase()}</span>
+               <span><strong>{item.name}</strong><small>{item.team?.category || item.teamCategory}{item.phone ? ` · ${item.phone}` : ''}</small></span>
+               <b>Message</b>
+             </button>
+             : <button className="direct-contact-card" key={item.id} onClick={() => setCollaborationTicket(item)}>
+               <span className="direct-contact-avatar">#</span>
+               <span><strong>Ticket #{item.id}</strong><small>{item.customerName} · {item.assignedTechnicianName || 'Assigned team'}</small></span>
+               <b>Open chat</b>
+             </button>)}
          </div>
         </section>}
         {workRate && user.role === 'ADMIN' && (activeView === 'overview' || activeView === 'reports' || activeView === 'technicians') && (
@@ -339,10 +346,10 @@ export default function Dashboard({ user, onLogout }) {
         <div className="field"><label>Team<select value={technicianForm.teamCategory} onChange={(e) => setTechnicianForm({ ...technicianForm, teamCategory: e.target.value })}><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & Installation</option></select></label></div>
         <div className="drawer-actions"><button type="button" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>Cancel</button><button className="primary">{editingTechnician ? 'Save changes' : 'Create account'}</button></div>
       </form></div>}
-      {user.role === 'ADMIN' && activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
+      {activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" />Home</button>
-        {user.role === 'ADMIN' && <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" />Messages</button>}
+        <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" />Messages</button>
         <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" />Tickets</button>
         {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" />Staff</button>}
         {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" />Reports</button>}

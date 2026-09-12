@@ -24,7 +24,9 @@ public class TicketController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public TicketResponse create(@Valid @RequestBody TicketRequest request) {
+    public TicketResponse create(@RequestHeader(value = "X-Auth-Token", required = false) String token,
+                                 @Valid @RequestBody TicketRequest request) {
+        authService.authenticate(token);
         return ticketService.createTicket(request);
     }
 
