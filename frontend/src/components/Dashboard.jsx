@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from '../api.js'
 import TicketQueue from './TicketQueue.jsx'
 import IntakeForm from './IntakeForm.jsx'
@@ -43,6 +43,7 @@ export default function Dashboard({ user, onLogout }) {
   const [technicianError, setTechnicianError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const loadVersion = useRef(0)
 
   useEffect(() => {
     sessionStorage.setItem('isp_active_view', activeView)
@@ -54,19 +55,22 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   const load = useCallback(async () => {
+    const version = ++loadVersion.current
     try {
       const requests = [
         api.getAllTickets(),
         api.getTechnicians(),
       ]
       if (user.role !== 'ADMIN') requests.push(api.getMyTechnician())
+      if (user.role === 'ADMIN') requests.push(api.getWorkRate(reportFilters))
       const results = await Promise.all(requests)
+      if (version !== loadVersion.current) return
       const ticketData = results[0]
       const techData = results[1]
       setTickets(ticketData)
       setTechnicians(techData)
       if (user.role !== 'ADMIN') setMyTechnician(results[2])
-      if (user.role === 'ADMIN') setWorkRate(await api.getWorkRate(reportFilters))
+      if (user.role === 'ADMIN') setWorkRate(results[2])
       setError('')
     } catch (err) {
       setError('We could not load the latest requests. Check the connection and try again.')
