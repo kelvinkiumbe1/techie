@@ -1,0 +1,494 @@
+import React, { useEffect, useState, useCallback, useRef } from 'react'
+import { api } from '../api.js'
+import TicketQueue from './TicketQueue.jsx'
+import IntakeForm from './IntakeForm.jsx'
+import CollaborationPanel from './CollaborationPanel.jsx'
+import DirectMessagePanel from './DirectMessagePanel.jsx'
+
+const POLL_MS = 20000
+
+function NavIcon({ name }) {
+  const paths = {
+    home: <><path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8" /><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" /></>,
+    tickets: <><path d="m3.173 8.18 11-5a2 2 0 0 1 2.647.993L18.56 8" /><path d="M6 10V8" /><path d="M6 14v1" /><path d="M6 19v2" /><rect x="2" y="8" width="20" height="13" rx="2" /></>,
+    staff: <><path d="M17 21a5 5 0 0 0-10 0" /><path d="M22 10.5a3.5 3.5 0 0 0-5.507-2.868" /><path d="M7.507 7.632A3.5 3.5 0 0 0 2 10.5" /><circle cx="12" cy="13" r="3" /><circle cx="18.5" cy="4.5" r="2.5" /><circle cx="5.5" cy="4.5" r="2.5" /></>,
+    reports: <><rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="M9 14h6" /></>,
+    messages: <><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8z" /><path d="M8 12h.01M12 12h.01M16 12h.01" /></>,
+    profile: <><path d="m19 16-3 3" /><path d="M2 21a8 8 0 0 1 12.664-6.5" /><path d="M22 19h-6l3 3" /><circle cx="10" cy="8" r="5" /></>,
+  }
+  return <svg className="nav-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{paths[name]}</svg>
+}
+
+export default function Dashboard({ user, onLogout }) {
+  const [tickets, setTickets] = useState([])
+  const [technicians, setTechnicians] = useState([])
+  const [admins, setAdmins] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [showIntake, setShowIntake] = useState(false)
+  const [workRate, setWorkRate] = useState(null)
+  const [collaborationTicket, setCollaborationTicket] = useState(null)
+  const [reportFilters, setReportFilters] = useState({ category: '', technicianId: '' })
+  const [myTechnician, setMyTechnician] = useState(null)
+  const [fieldTicket, setFieldTicket] = useState(null)
+  const [fieldNote, setFieldNote] = useState('')
+  const [activeView, setActiveView] = useState(() => sessionStorage.getItem('isp_active_view') || 'overview')
+  const [showProfile, setShowProfile] = useState(false)
+  const [avatar, setAvatar] = useState(() => localStorage.getItem('isp_avatar') || '')
+  const [notifications, setNotifications] = useState(() => localStorage.getItem('isp_notifications') === 'true')
+  const [showTechnicianForm, setShowTechnicianForm] = useState(false)
+  const [editingTechnician, setEditingTechnician] = useState(null)
+  const [openTechnicianMenu, setOpenTechnicianMenu] = useState(null)
+  const [directTechnician, setDirectTechnician] = useState(null)
+  const [technicianForm, setTechnicianForm] = useState({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
+  const [technicianError, setTechnicianError] = useState('')
+  const [showAdminForm, setShowAdminForm] = useState(false)
+  const [editingAdmin, setEditingAdmin] = useState(null)
+  const [adminForm, setAdminForm] = useState({ username: '', password: '' })
+  const [adminError, setAdminError] = useState('')
+  const [staffSection, setStaffSection] = useState('technicians')
+  const [staffSearch, setStaffSearch] = useState('')
+  const [deleteConfirm, setDeleteConfirm] = useState(null)
+  const [unreadMessages, setUnreadMessages] = useState(0)
+  const previousUnread = useRef(null)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const loadVersion = useRef(0)
+
+  useEffect(() => {
+    sessionStorage.setItem('isp_active_view', activeView)
+  }, [activeView])
+  function navigate(view) {
+    setDirectTechnician(null)
+    setCollaborationTicket(null)
+    setActiveView(view)
+  }
+
+  const load = useCallback(async () => {
+    const version = ++loadVersion.current
+    try {
+      const requests = [
+        api.getAllTickets(),
+        api.getTechnicians(),
+      ]
+      if (user.role !== 'ADMIN') requests.push(api.getMyTechnician())
+      if (user.role === 'ADMIN') requests.push(api.getWorkRate(reportFilters))
+      if (user.role === 'ADMIN') requests.push(api.getAdmins())
+      const results = await Promise.all(requests)
+      if (version !== loadVersion.current) return
+      const ticketData = results[0]
+      const techData = results[1]
+      setTickets(ticketData)
+      setTechnicians(techData)
+      if (user.role !== 'ADMIN') {
+        setMyTechnician(results[2])
+        if (results[2]?.avatar) setAvatar(results[2].avatar)
+      }
+      if (user.role === 'ADMIN') setWorkRate(results[2])
+      if (user.role === 'ADMIN') setAdmins(results[3])
+      setError('')
+    } catch (err) {
+      if (err.status === 400 && err.message === 'Authentication required') {
+        onLogout()
+        return
+      }
+      setError('We could not load the latest requests. Check the connection and try again.')
+    } finally {
+      setLoading(false)
+    }
+  }, [reportFilters, user.role])
+
+  useEffect(() => {
+    load()
+    const interval = setInterval(load, POLL_MS)
+    return () => clearInterval(interval)
+  }, [load])
+
+  useEffect(() => {
+    let active = true
+    const refreshUnread = async () => {
+      try {
+        const result = await api.getUnreadMessageCount()
+        if (!active) return
+        const count = Number(result.count || 0)
+        if (notifications && previousUnread.current !== null && count > previousUnread.current && 'Notification' in window && Notification.permission === 'granted') {
+          new Notification('Techie Tracker', { body: 'You have a new unread message.' })
+        }
+        previousUnread.current = count
+        setUnreadMessages(count)
+      } catch (_) {
+        // The dashboard data request surfaces connection and session errors.
+      }
+    }
+    refreshUnread()
+    const interval = setInterval(refreshUnread, 5000)
+    return () => { active = false; clearInterval(interval) }
+  }, [notifications, user.role])
+
+  useEffect(() => {
+    if (user.role !== 'TECHNICIAN') return undefined
+    api.heartbeat().catch(() => {})
+    const interval = setInterval(() => api.heartbeat().catch(() => {}), 60000)
+    return () => clearInterval(interval)
+  }, [user.role])
+
+  async function handleAssign(ticketId, technicianId) {
+    await api.assignTicket(ticketId, technicianId)
+    load()
+  }
+
+  async function handleStatusChange(ticketId, status) {
+    await api.updateStatus(ticketId, status)
+    load()
+  }
+
+  async function handleStartWork(ticketId) { await api.startWork(ticketId); load() }
+  async function handleStopWork(ticketId) { await api.stopWork(ticketId); load() }
+  async function handleFieldUpdate() {
+    if (!fieldTicket || !fieldNote.trim()) return
+    await api.fieldUpdate(fieldTicket.id, { note: fieldNote })
+    setFieldTicket(null); setFieldNote(''); load()
+  }
+  async function handleMyStatus(e) { await api.updateMyStatus(e.target.value); load() }
+  function handleAvatar(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) return
+    const reader = new FileReader()
+    reader.onload = async () => {
+      const value = String(reader.result)
+      setAvatar(value)
+      localStorage.setItem('isp_avatar', value)
+      if (user.role === 'TECHNICIAN') {
+        try { await api.updateMyProfile({ avatar: value }); await load() } catch (err) { setError(err.message || 'Could not save profile photo.') }
+      }
+    }
+    reader.readAsDataURL(file)
+  }
+  async function handleNotifications() {
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'denied') return
+    if (Notification.permission !== 'granted') {
+      const permission = await Notification.requestPermission()
+      if (permission !== 'granted') return
+    }
+    setNotifications((value) => { localStorage.setItem('isp_notifications', String(!value)); return !value })
+  }
+
+  async function handleCreate(form) {
+    await api.createTicket(form)
+    setShowIntake(false)
+    load()
+  }
+
+  async function handleTechStatus(tech) {
+    await api.updateTechnician(tech.id, { status: tech.status === 'OFF' ? 'AVAILABLE' : 'OFF' })
+    load()
+  }
+  function openTechnicianEditor(tech) {
+    setOpenTechnicianMenu(null)
+    setTechnicianError('')
+    setEditingTechnician(tech)
+    setTechnicianForm({ name: tech.name, phone: tech.phone || '', username: tech.username || '', password: '', teamCategory: tech.team?.category || tech.teamCategory || 'SUPPORT' })
+    setShowTechnicianForm(true)
+  }
+  async function handleDeleteTechnician(tech) {
+    setOpenTechnicianMenu(null)
+    setDeleteConfirm({ type: 'technician', account: tech })
+  }
+  async function handleCreateTechnician(e) {
+    e.preventDefault()
+    setTechnicianError('')
+    try {
+      if (editingTechnician) {
+        await api.updateTechnician(editingTechnician.id, { name: technicianForm.name, phone: technicianForm.phone, teamCategory: technicianForm.teamCategory, username: technicianForm.username })
+        if (technicianForm.password) await api.resetTechnicianPassword(editingTechnician.id, technicianForm.password)
+      } else {
+        await api.createTechnician(technicianForm)
+      }
+      setTechnicianForm({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
+      setEditingTechnician(null)
+      setShowTechnicianForm(false)
+      load()
+    } catch (err) {
+      setTechnicianError(err.message || 'Could not create technician account.')
+    }
+  }
+  function openAdminEditor(admin) {
+    setEditingAdmin(admin)
+    setAdminForm({ username: admin.username, password: '' })
+    setAdminError('')
+    setShowAdminForm(true)
+  }
+  async function handleAdminSubmit(e) {
+    e.preventDefault()
+    setAdminError('')
+    try {
+      if (editingAdmin) await api.updateAdmin(editingAdmin.id, adminForm)
+      else await api.createAdmin(adminForm)
+      setShowAdminForm(false)
+      setEditingAdmin(null)
+      setAdminForm({ username: '', password: '' })
+      load()
+    } catch (err) {
+      setAdminError(err.message || 'Could not save admin account.')
+    }
+  }
+  async function handleDeleteAdmin(admin) {
+    setDeleteConfirm({ type: 'admin', account: admin })
+  }
+  async function confirmDelete() {
+    if (!deleteConfirm) return
+    try {
+      if (deleteConfirm.type === 'technician') await api.deleteTechnician(deleteConfirm.account.id)
+      else await api.deleteAdmin(deleteConfirm.account.id)
+      setDeleteConfirm(null)
+      load()
+    } catch (err) {
+      if (deleteConfirm.type === 'technician') setTechnicianError(err.message || 'Could not delete technician account.')
+      else setAdminError(err.message || 'Could not delete admin account.')
+    }
+  }
+
+  const visibleTickets = tickets.filter((ticket) => {
+    const query = search.trim().toLowerCase()
+    const matchesSearch = !query || [ticket.customerName, ticket.description, ticket.issueType, ticket.assignedTechnicianName]
+      .filter(Boolean).some((value) => value.toLowerCase().includes(query))
+    return matchesSearch && (!statusFilter || ticket.status === statusFilter)
+  })
+  const supportTickets = visibleTickets.filter((t) => t.category === 'SUPPORT')
+  const fiberTickets = visibleTickets.filter((t) => t.category === 'FIBER_INSTALL')
+  const escalatedCount = tickets.filter((t) => t.escalated).length
+
+  return (
+    <div className="app-shell">
+      <aside className="sidebar">
+        <div className="sidebar-brand"><img className="brand-mark" src="/icons/icon.svg" alt="" /><div><strong>Techie Tracker</strong><small>Dispatch workspace</small></div></div>
+        <nav className="main-nav" aria-label="Main navigation">
+          <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" /> Overview</button>
+          <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
+          <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" /> Messages {unreadMessages > 0 && <b className="unread-badge">{unreadMessages > 99 ? '99+' : unreadMessages}</b>}</button>
+          {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
+        </nav>
+        <div className="sidebar-spacer" />
+        <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button onClick={onLogout} aria-label="Sign out">↪</button></div>
+      </aside>
+      <div className="workspace">
+      <div className="topbar">
+        <div className="topbar-brand">
+          <span className="mobile-brand">Techie Tracker</span><span className="view-label">{activeView === 'overview' ? 'Overview' : activeView[0].toUpperCase() + activeView.slice(1)}</span>
+        </div>
+        <div className="profile-trigger-wrap">
+         <button className="notification-trigger" onClick={handleNotifications} aria-label="Toggle notifications" title={notifications ? 'Notifications on' : 'Turn on notifications'}>
+           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+           {unreadMessages > 0 && <i className="notification-dot" />}
+         </button>
+         <button className="profile-trigger" onClick={() => setShowProfile((value) => !value)} aria-label="Open profile and settings">
+            {avatar ? <img src={avatar} alt="" /> : <span>{user.username.slice(0, 1).toUpperCase()}</span>}
+          </button>
+          {showProfile && <section className="profile-menu">
+            <div className="profile-menu-heading">
+              {avatar ? <img src={avatar} alt="" /> : <span className="profile-large-avatar">{user.username.slice(0, 1).toUpperCase()}</span>}
+              <div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : `Technician · ${user.teamCategory}`}</small></div>
+            </div>
+            <label className="profile-option profile-upload"><span>Profile photo</span><span className="choose-file">Choose file<input type="file" accept="image/*" onChange={handleAvatar} /></span></label>
+            <button className="profile-option notification-option" onClick={handleNotifications}><span>Notifications</span><b>{notifications ? 'On' : 'Off'}</b></button>
+            <button className="profile-signout" onClick={onLogout}>Sign out</button>
+          </section>}
+        </div>
+        {myTechnician && <label className="tech-status">Status
+          <select value={myTechnician.status} onChange={handleMyStatus}>
+            <option value="AVAILABLE">Available</option><option value="BUSY">Busy</option><option value="OFF">Off duty</option>
+          </select>
+        </label>}
+        <button className="new-ticket-btn" onClick={() => setShowIntake(true)}>
+          + Log request
+        </button>
+      </div>
+
+      <div className="main-content">
+        {activeView === 'overview' && <section className="dashboard-intro">
+          <div><p className="eyebrow">{user.role === 'ADMIN' ? 'Operations overview' : 'Your work queue'}</p>
+            <h2>{user.role === 'ADMIN' ? 'Keep every request moving' : 'Focus on your assigned work'}</h2>
+            <p className="intro-copy">{user.role === 'ADMIN' ? 'Assign, monitor, and support your teams from one place.' : 'Update progress, add field notes, and contact your team from each ticket.'}</p>
+          </div>
+          <div className="queue-summary"><strong>{tickets.length}</strong><span>active requests</span></div>
+        </section>}
+        {(activeView === 'overview' || activeView === 'tickets') && <div className="queue-tools" aria-label="Ticket filters">
+          <label className="search-field"><span>Search</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Customer, issue, technician..." /></label>
+          <label><span>Status</span><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All statuses</option><option value="NEW">New</option><option value="ASSIGNED">Assigned</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option></select></label>
+          {(search || statusFilter) && <button className="clear-filter" onClick={() => { setSearch(''); setStatusFilter('') }}>Clear filters</button>}
+        </div>}
+        {escalatedCount > 0 && (
+          <div className="escalation-banner">
+            <span className="escalation-dot" />
+            {escalatedCount} request{escalatedCount === 1 ? '' : 's'} waiting too long — check the highlighted rows below.
+          </div>
+        )}
+
+        {loading ? (
+          <div className="loading-state">Loading queues…</div>
+        ) : error ? (
+          <div className="error-state"><strong>We couldn't load the dashboard.</strong><span>{error}</span><button onClick={load}>Try again</button></div>
+        ) : (
+          <>
+          {(activeView === 'overview' || activeView === 'tickets') && <div className="board">
+            <TicketQueue
+              title="Support"
+              category="SUPPORT"
+              color="var(--support)"
+              tickets={supportTickets}
+              technicians={technicians}
+              onAssign={handleAssign}
+              onStatusChange={handleStatusChange}
+              isAdmin={user.role === 'ADMIN'}
+              onCollaborate={setCollaborationTicket}
+              onStartWork={handleStartWork} onStopWork={handleStopWork} onFieldUpdate={setFieldTicket}
+            />
+            <TicketQueue
+              title="Fiber & Installation"
+              category="FIBER_INSTALL"
+              color="var(--fiber)"
+              tickets={fiberTickets}
+              technicians={technicians}
+              onAssign={handleAssign}
+              onStatusChange={handleStatusChange}
+              isAdmin={user.role === 'ADMIN'}
+              onCollaborate={setCollaborationTicket}
+              onStartWork={handleStartWork} onStopWork={handleStopWork} onFieldUpdate={setFieldTicket}
+            />
+          </div>}
+          </>
+        )}
+        {activeView === 'messages' && <section className="messages-view">
+         <div className="messages-view-header"><div><p className="eyebrow">Team communication</p><h2>{user.role === 'ADMIN' ? 'Direct messages' : 'Team messages'}</h2><p className="intro-copy">{user.role === 'ADMIN' ? 'Message a technician privately or contact them by phone or WhatsApp.' : 'Message another technician and see who is available.'}</p></div></div>
+         <div className="direct-contact-list">
+           {(user.role === 'ADMIN' ? technicians : technicians.filter((item) => item.id !== myTechnician?.id)).map((item) => user.role === 'ADMIN'
+             ? <button className="direct-contact-card" key={item.id} onClick={() => setDirectTechnician(item)}>
+               <span className="direct-contact-avatar">{item.avatar ? <img src={item.avatar} alt="" /> : item.name.slice(0, 1).toUpperCase()}<i className={item.online ? 'online-dot' : ''} /></span>
+               <span><strong>{item.name}</strong><small>{item.online ? 'Online now' : item.lastSeen ? `Last seen ${new Date(item.lastSeen).toLocaleString()}` : 'Offline'} · {item.team?.category || item.teamCategory}</small></span>
+               <b>Message</b>
+             </button>
+             : <button className="direct-contact-card" key={item.id} onClick={() => setDirectTechnician(item)}>
+               <span className="direct-contact-avatar">{item.avatar ? <img src={item.avatar} alt="" /> : item.name.slice(0, 1).toUpperCase()}<i className={item.online ? 'online-dot' : ''} /></span>
+               <span><strong>{item.name}</strong><small>{item.online ? 'Online now' : item.lastSeen ? `Last seen ${new Date(item.lastSeen).toLocaleString()}` : 'Offline'} · {item.team?.category || item.teamCategory}</small></span>
+               <b>Message</b>
+             </button>)}
+         </div>
+        </section>}
+        {workRate && user.role === 'ADMIN' && (activeView === 'overview' || activeView === 'reports' || activeView === 'technicians') && (
+          <section className="admin-panel">
+            <div className="admin-panel-header">
+              <div>
+                <p className="eyebrow">{activeView === 'technicians' ? 'People & access' : 'Performance'}</p>
+                <h2>{activeView === 'technicians' ? 'Staff workspace' : 'Operations report'}</h2>
+                {activeView === 'technicians' && <p className="intro-copy">Manage your field team and administrator access from one place.</p>}
+              </div>
+              {activeView !== 'technicians' && <div className="report-filters">
+                <select value={reportFilters.category} onChange={(e) => setReportFilters({ ...reportFilters, category: e.target.value })}>
+                  <option value="">All teams</option><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & installation</option>
+                </select>
+                <select value={reportFilters.technicianId} onChange={(e) => setReportFilters({ ...reportFilters, technicianId: e.target.value })}>
+                  <option value="">All technicians</option>
+                  {technicians.map((tech) => <option key={tech.id} value={tech.id}>{tech.name}</option>)}
+                </select>
+              </div>}
+            </div>
+            {activeView === 'technicians' && <div className="staff-summary">
+              <div><strong>{technicians.length}</strong><span>Total technicians</span></div>
+              <div><strong>{technicians.filter((tech) => tech.status !== 'OFF').length}</strong><span>Available accounts</span></div>
+              <div><strong>{technicians.filter((tech) => tech.status === 'OFF').length}</strong><span>Off duty</span></div>
+              <div><strong>{admins.length}</strong><span>Administrators</span></div>
+            </div>}
+            {activeView !== 'technicians' && <div className="report-summary">
+              <span><strong>{workRate.pendingTickets}</strong> pending</span>
+              <span><strong>{workRate.resolvedTickets}</strong> resolved</span>
+              <span><strong>{workRate.cancelledTickets}</strong> cancelled</span>
+              <span><strong>{workRate.resolutionRate}%</strong> resolution rate</span>
+            </div>}
+            {activeView === 'technicians' && <div className="staff-tabs" role="tablist">
+              <button className={staffSection === 'technicians' ? 'active' : ''} onClick={() => setStaffSection('technicians')}>Technicians <b>{technicians.length}</b></button>
+              <button className={staffSection === 'admins' ? 'active' : ''} onClick={() => setStaffSection('admins')}>Administrators <b>{admins.length}</b></button>
+            </div>}
+            {activeView === 'technicians' && staffSection === 'technicians' && <div className="technician-list staff-section">
+              <div className="admin-subheader"><div><h3>Technicians</h3><p>Assignment, availability, and account controls.</p></div><button className="primary small-button" onClick={() => { setTechnicianError(''); setEditingTechnician(null); setShowTechnicianForm(true) }}>+ Add technician</button></div>
+              <input className="staff-search" value={staffSearch} onChange={(e) => setStaffSearch(e.target.value)} placeholder="Search technicians..." />
+              {(workRate.technicianMetrics || []).filter((metric) => !staffSearch.trim() || metric.name.toLowerCase().includes(staffSearch.trim().toLowerCase())).map((metric) => {
+                const tech = technicians.find((item) => item.id === metric.technicianId)
+                return <div className="technician-row" key={metric.technicianId}>
+                  <span className="staff-person"><span className="staff-avatar">{metric.name.slice(0, 1).toUpperCase()}</span><span><strong>{metric.name}</strong><small>{metric.teamCategory === 'FIBER_INSTALL' ? 'Fiber & installation' : 'Support'}</small></span></span>
+                  <span className="staff-metrics"><b className={`staff-status ${metric.status === 'OFF' ? 'offline' : ''}`}>{metric.status === 'OFF' ? 'Off duty' : 'Available'}</b>{metric.pendingTickets} pending · {metric.resolvedTickets} resolved · {metric.resolutionRate}% rate</span>
+                  {tech && <div className="technician-actions">
+                    <button className="technician-menu-trigger" onClick={() => setOpenTechnicianMenu(openTechnicianMenu === tech.id ? null : tech.id)} aria-label={`Actions for ${tech.name}`}>•••</button>
+                    {openTechnicianMenu === tech.id && <div className="technician-menu">
+                      <button onClick={() => { setOpenTechnicianMenu(null); setDirectTechnician(tech) }}>Message / contact</button>
+                      <button onClick={() => openTechnicianEditor(tech)}>Edit credentials</button>
+                      <button onClick={() => { setOpenTechnicianMenu(null); handleTechStatus(tech) }}>{metric.status === 'OFF' ? 'Enable account' : 'Disable account'}</button>
+                      <button className="danger-action" onClick={() => handleDeleteTechnician(tech)}>Delete account</button>
+                    </div>}
+                  </div>}
+                </div>
+              })}
+             </div>}
+             {activeView === 'technicians' && staffSection === 'admins' && <div className="technician-list admin-accounts-list staff-section">
+               <div className="admin-subheader"><div><h3>Administrators</h3><p>People who can manage tickets, staff, and settings.</p></div><button className="primary small-button" onClick={() => { setEditingAdmin(null); setAdminForm({ username: '', password: '' }); setAdminError(''); setShowAdminForm(true) }}>+ Add administrator</button></div>
+               {adminError && <div className="form-error">{adminError}</div>}
+               {admins.map((admin) => <div className="technician-row" key={admin.id}>
+                 <span className="staff-person"><span className="staff-avatar">{admin.username.slice(0, 1).toUpperCase()}</span><span><strong>{admin.username}</strong><small>Administrator</small></span></span>
+                 <span className={`staff-status ${admin.enabled ? '' : 'offline'}`}>{admin.enabled ? 'Active' : 'Disabled'}</span>
+                 <div className="technician-actions"><button className="small-button" onClick={() => openAdminEditor(admin)}>Edit</button><button className="danger-action" onClick={() => handleDeleteAdmin(admin)}>Delete</button></div>
+               </div>)}
+             </div>}
+          </section>
+        )}
+      </div>
+
+      {showIntake && <IntakeForm onClose={() => setShowIntake(false)} onCreated={handleCreate} />}
+      {collaborationTicket && <CollaborationPanel ticket={collaborationTicket} onClose={() => setCollaborationTicket(null)} />}
+      {directTechnician && <DirectMessagePanel technician={directTechnician} onClose={() => setDirectTechnician(null)} />}
+      {fieldTicket && <div className="drawer-backdrop"><section className="drawer">
+        <h2>Field update</h2><p className="drawer-sub">{fieldTicket.customerName} · ticket #{fieldTicket.id}</p>
+        <div className="field"><label>Work note</label><textarea value={fieldNote} onChange={(e) => setFieldNote(e.target.value)} placeholder="What did you find or change?" autoFocus /></div>
+        <div className="drawer-actions"><button onClick={() => { setFieldTicket(null); setFieldNote('') }}>Cancel</button><button className="primary" onClick={handleFieldUpdate} disabled={!fieldNote.trim()}>Save update</button></div>
+      </section></div>}
+      {showTechnicianForm && <div className="drawer-backdrop"><form className="drawer" onSubmit={handleCreateTechnician}>
+        <h2>{editingTechnician ? 'Edit technician account' : 'Create technician account'}</h2><p className="drawer-sub">{editingTechnician ? 'Update profile details or credentials.' : 'Create login details and place the technician on the correct team.'}</p>
+        {technicianError && <div className="form-error">{technicianError}</div>}
+        <div className="field"><label>Full name<input required value={technicianForm.name} onChange={(e) => setTechnicianForm({ ...technicianForm, name: e.target.value })} placeholder="e.g. Alex Kamau" /></label></div>
+        <div className="field"><label>Phone number<input value={technicianForm.phone} onChange={(e) => setTechnicianForm({ ...technicianForm, phone: e.target.value })} placeholder="Optional" /></label></div>
+        <div className="field"><label>Username<input required value={technicianForm.username} onChange={(e) => setTechnicianForm({ ...technicianForm, username: e.target.value })} placeholder="Login username" /></label></div>
+        <div className="field"><label>{editingTechnician ? 'New password (optional)' : 'Temporary password'}<input required={!editingTechnician} minLength="6" type="password" value={technicianForm.password} onChange={(e) => setTechnicianForm({ ...technicianForm, password: e.target.value })} placeholder={editingTechnician ? 'Leave blank to keep current password' : 'At least 6 characters'} /></label></div>
+        <div className="field"><label>Team<select value={technicianForm.teamCategory} onChange={(e) => setTechnicianForm({ ...technicianForm, teamCategory: e.target.value })}><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & Installation</option></select></label></div>
+        <div className="drawer-actions"><button type="button" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>Cancel</button><button className="primary">{editingTechnician ? 'Save changes' : 'Create account'}</button></div>
+      </form></div>}
+      {showAdminForm && <div className="drawer-backdrop"><form className="drawer" onSubmit={handleAdminSubmit}>
+        <h2>{editingAdmin ? 'Edit admin account' : 'Create admin account'}</h2>
+        <p className="drawer-sub">{editingAdmin ? 'Update the username or set a new password.' : 'Give another administrator secure access to the workspace.'}</p>
+        {adminError && <div className="form-error">{adminError}</div>}
+        <div className="field"><label>Username<input required value={adminForm.username} onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })} /></label></div>
+        <div className="field"><label>{editingAdmin ? 'New password (optional)' : 'Password'}<input required={!editingAdmin} minLength="6" type="password" value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} placeholder={editingAdmin ? 'Leave blank to keep current password' : 'At least 6 characters'} /></label></div>
+        <div className="drawer-actions"><button type="button" onClick={() => setShowAdminForm(false)}>Cancel</button><button className="primary">{editingAdmin ? 'Save changes' : 'Create account'}</button></div>
+      </form></div>}
+      {deleteConfirm && <div className="modal-backdrop" role="presentation" onMouseDown={(e) => { if (e.target === e.currentTarget) setDeleteConfirm(null) }}>
+        <section className="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-title">
+          <div className="confirm-icon">!</div>
+          <p className="eyebrow">Permanent action</p>
+          <h2 id="delete-title">Delete {deleteConfirm.type === 'technician' ? 'technician' : 'administrator'}?</h2>
+          <p className="confirm-copy">You are about to delete <strong>{deleteConfirm.account.name || deleteConfirm.account.username}</strong>. This cannot be undone.</p>
+          {deleteConfirm.type === 'technician' && <div className="confirm-warning"><strong>What will happen?</strong><span>The account will lose access and any assigned tickets will be unassigned. Ticket history will remain.</span></div>}
+          {deleteConfirm.type === 'admin' && <div className="confirm-warning"><strong>Check before deleting</strong><span>They will immediately lose access to the workspace. Make sure another active administrator can continue managing the system.</span></div>}
+          <div className="confirm-actions"><button type="button" onClick={() => setDeleteConfirm(null)}>Keep account</button><button type="button" className="danger-button" onClick={confirmDelete}>Delete account</button></div>
+        </section>
+      </div>}
+      {activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
+      <nav className="mobile-nav" aria-label="Mobile navigation">
+        <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" />Home</button>
+        <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" />Messages {unreadMessages > 0 && <b className="unread-badge">{unreadMessages > 99 ? '99+' : unreadMessages}</b>}</button>
+        <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" />Tickets</button>
+        {user.role === 'ADMIN' && <button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" />Staff</button>}
+        {user.role === 'ADMIN' && <button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" />Reports</button>}
+      </nav>
+    </div>
+    </div>
+  )
+}
