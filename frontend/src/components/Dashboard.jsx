@@ -36,6 +36,7 @@ export default function Dashboard({ user, onLogout }) {
   const [showProfile, setShowProfile] = useState(false)
   const [avatar, setAvatar] = useState(() => localStorage.getItem('isp_avatar') || '')
   const [fullscreenImage, setFullscreenImage] = useState('')
+  const [showProfileActions, setShowProfileActions] = useState(false)
   const [notifications, setNotifications] = useState(() => localStorage.getItem('isp_notifications') === 'true')
   const [showTechnicianForm, setShowTechnicianForm] = useState(false)
   const [editingTechnician, setEditingTechnician] = useState(null)
@@ -55,6 +56,7 @@ export default function Dashboard({ user, onLogout }) {
     sessionStorage.setItem('isp_active_view', activeView)
   }, [activeView])
   function navigate(view) {
+    setShowProfileActions(false)
     setDirectTechnician(null)
     setCollaborationTicket(null)
     setActiveView(view)
@@ -126,16 +128,18 @@ export default function Dashboard({ user, onLogout }) {
     if (!file) return
     if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
-    reader.onload = () => { const value = String(reader.result); setAvatar(value); localStorage.setItem('isp_avatar', value) }
+    reader.onload = () => { const value = String(reader.result); setAvatar(value); setFullscreenImage(value); localStorage.setItem('isp_avatar', value) }
     reader.readAsDataURL(file)
   }
   function openAvatarPreview(e) {
     e.stopPropagation()
+    setShowProfileActions(true)
     if (avatar) setFullscreenImage(avatar)
   }
   function removeAvatar() {
     setAvatar('')
     setFullscreenImage('')
+    setShowProfileActions(true)
     localStorage.removeItem('isp_avatar')
   }
   async function handleNotifications() {
@@ -234,18 +238,9 @@ export default function Dashboard({ user, onLogout }) {
           <span className="mobile-brand">Techie Tracker</span><span className="view-label">{activeView === 'overview' ? 'Overview' : activeView[0].toUpperCase() + activeView.slice(1)}</span>
         </div>
         <div className="profile-trigger-wrap">
-          <button className="profile-trigger" onClick={() => setShowProfile((value) => !value)} aria-label="Open profile and settings">
-            {avatar ? <img src={avatar} alt={`${user.username} profile`} onClick={openAvatarPreview} /> : <span>{user.username.slice(0, 1).toUpperCase()}</span>}
+          <button className="profile-trigger" onClick={() => { setShowProfile(false); setShowProfileActions(true); setFullscreenImage(avatar) }} aria-label="Open profile actions">
+            {avatar ? <img src={avatar} alt={`${user.username} profile`} /> : <span>{user.username.slice(0, 1).toUpperCase()}</span>}
           </button>
-          {showProfile && <section className="profile-menu">
-            <div className="profile-menu-heading">
-              {avatar ? <img src={avatar} alt={`${user.username} profile`} onClick={openAvatarPreview} /> : <span className="profile-large-avatar">{user.username.slice(0, 1).toUpperCase()}</span>}
-              <div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : `Technician · ${user.teamCategory}`}</small></div>
-            </div>
-            <label className="profile-option profile-change-photo"><span>{avatar ? 'Change photo' : 'Add profile photo'}</span><span className="choose-file">Choose image<input type="file" accept="image/*" onChange={handleAvatar} /></span></label>
-            <button className="profile-option notification-option" onClick={handleNotifications}><span>Notifications</span><b>{notifications ? 'On' : 'Off'}</b></button>
-            <button className="profile-signout" onClick={onLogout}>Sign out</button>
-          </section>}
         </div>
         {myTechnician && <label className="tech-status">Status
           <select value={myTechnician.status} onChange={handleMyStatus}>
@@ -396,14 +391,13 @@ export default function Dashboard({ user, onLogout }) {
         <div className="drawer-actions"><button type="button" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>Cancel</button><button className="primary">{editingTechnician ? 'Save changes' : 'Create account'}</button></div>
       </form></div>}
       {activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
-      {fullscreenImage && <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label="Profile photo preview" onClick={() => setFullscreenImage('')}>
+      {showProfileActions && <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label="Profile actions" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }}>
         <div className="avatar-lightbox-card" onClick={(e) => e.stopPropagation()}>
-          <button className="avatar-lightbox-close" onClick={() => setFullscreenImage('')} aria-label="Close profile photo">×</button>
+          <button className="avatar-lightbox-close" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }} aria-label="Close profile actions">×</button>
           <div className="avatar-lightbox-image-wrap">
-            <img src={fullscreenImage} alt={`${user.username} profile enlarged`} />
+            {fullscreenImage ? <img src={fullscreenImage} alt={`${user.username} profile enlarged`} /> : <span className="avatar-lightbox-placeholder">{user.username.slice(0, 1).toUpperCase()}</span>}
             <label className="avatar-edit-button" title="Change profile photo" aria-label="Change profile photo">
-              <span aria-hidden="true">✎</span>
-              <input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setFullscreenImage('') }} />
+              <span aria-hidden="true">✎</span><input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setShowProfileActions(true) }} />
             </label>
           </div>
           <strong>{user.username}</strong><span>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</span>

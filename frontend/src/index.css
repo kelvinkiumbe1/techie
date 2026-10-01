@@ -80,6 +80,7 @@ textarea:focus-visible {
 .avatar-lightbox-card { position:relative; display:grid; justify-items:center; gap:8px; max-width:min(92vw,520px); color:#fff; cursor:default; }
 .avatar-lightbox-image-wrap { position:relative; }
 .avatar-lightbox-card img { display:block; width:min(72vw,360px); height:min(72vw,360px); max-width:80vh; max-height:70vh; object-fit:cover; border:5px solid #fff; border-radius:50%; box-shadow:0 18px 60px rgba(0,0,0,.45); }
+.avatar-lightbox-placeholder { display:grid; place-items:center; width:min(72vw,360px); height:min(72vw,360px); max-width:80vh; max-height:70vh; border:5px solid #fff; border-radius:50%; background:var(--support); color:var(--ink); box-shadow:0 18px 60px rgba(0,0,0,.45); font-size:clamp(72px,18vw,150px); font-weight:800; }
 .avatar-lightbox-card strong { font-size:18px; }.avatar-lightbox-card span { color:#f4c99b; font-size:12px; }.avatar-lightbox-close { position:absolute; top:-18px; right:-18px; z-index:1; width:36px; height:36px; border:2px solid #fff; border-radius:50%; background:var(--ink); color:#fff; font-size:24px; line-height:1; cursor:pointer; }
 .avatar-edit-button { position:absolute; right:10px; bottom:10px; width:42px; height:42px; display:grid; place-items:center; border:3px solid #fff; border-radius:50%; background:var(--support); color:var(--ink); box-shadow:0 4px 14px rgba(0,0,0,.3); cursor:pointer; font-size:20px; }
 .avatar-edit-button input, .avatar-photo-action input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
