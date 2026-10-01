@@ -69,7 +69,7 @@ textarea:focus-visible {
 .brand-mark, .user-avatar { width:34px; height:34px; display:grid; place-items:center; border-radius:9px; background:var(--support); color:var(--ink); font-size:11px; font-weight:800; }.brand-mark { object-fit:cover; }
 .main-nav { display:grid; gap:4px; }.main-nav button { display:flex; align-items:center; gap:10px; width:100%; padding:10px 11px; border:0; border-radius:7px; background:transparent; color:#f5dcd1; text-align:left; cursor:pointer; font:inherit; font-size:13px; }
 .main-nav button:hover, .main-nav button.active { background:#6b211b; color:#fff; }.nav-icon { width:18px; height:18px; flex:none; }.main-nav button b { margin-left:auto; font-size:11px; color:#f4c99b; }
-.sidebar-spacer { flex:1; }.sidebar-user { display:flex; align-items:center; gap:9px; padding:12px 7px 0; border-top:1px solid #6b211b; }.sidebar-user strong { display:block; font-size:12px; }.sidebar-user > div { flex:1; }.sidebar-user button { border:0; background:transparent; color:#f4c99b; font-size:18px; cursor:pointer; }
+.sidebar-spacer { flex:1; }.sidebar-user { display:flex; align-items:center; gap:9px; padding:12px 7px 0; border-top:1px solid #6b211b; }.sidebar-user strong { display:block; font-size:12px; }.sidebar-user > div { flex:1; }.sidebar-user button { border:0; background:transparent; color:#f4c99b; font-size:18px; cursor:pointer; }.sidebar-signout { display:flex; align-items:center; gap:5px; padding:7px 6px; border-radius:6px !important; font-size:11px !important; white-space:nowrap; }.sidebar-signout:hover { background:#6b211b; color:#fff; }
 .workspace { min-width:0; flex:1; display:flex; flex-direction:column;
 }
 .mobile-nav { display:none; }
@@ -87,6 +87,7 @@ textarea:focus-visible {
 .avatar-photo-action { display:inline-flex; align-items:center; gap:6px; padding:9px 12px; border:1px solid rgba(255,255,255,.45); border-radius:7px; background:rgba(255,255,255,.12); color:#fff; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
 .avatar-photo-action.primary { background:#fff; color:var(--ink); border-color:#fff; }
 .avatar-photo-action.danger { color:#ffd4d4; border-color:#d98b8b; }
+.avatar-photo-action.signout { color:#f4c99b; border-color:#b36b58; }
 .avatar-photo-action:hover { filter:brightness(1.08); }
 @keyframes avatar-fade-in { from { opacity:0; } to { opacity:1; } }
 .profile-menu { position:absolute; right:0; top:44px; z-index:200; display:block; width:260px; padding:14px; background:#fffdf8; color:#4e0401; border:1px solid #ead8c7; border-radius:10px; box-shadow:0 12px 28px rgba(78,4,1,.28); }

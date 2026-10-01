@@ -226,7 +226,7 @@ export default function Dashboard({ user, onLogout }) {
           {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
-        <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button onClick={onLogout} aria-label="Sign out">↪</button></div>
+        <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button className="sidebar-signout" onClick={onLogout} aria-label="Sign out"><span aria-hidden="true">↪</span><span>Sign out</span></button></div>
       </aside>
       <div className="workspace">
       <div className="topbar">
@@ -412,6 +412,7 @@ export default function Dashboard({ user, onLogout }) {
               <input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setFullscreenImage('') }} />
             </label>
             <button className="avatar-photo-action danger" onClick={removeAvatar}><span aria-hidden="true">⌫</span> Delete photo</button>
+            <button className="avatar-photo-action signout" onClick={onLogout}><span aria-hidden="true">↪</span> Sign out</button>
           </div>
         </div>
       </div>}
