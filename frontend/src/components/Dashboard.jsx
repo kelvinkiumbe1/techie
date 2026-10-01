@@ -242,6 +242,7 @@ export default function Dashboard({ user, onLogout }) {
               {avatar ? <img src={avatar} alt={`${user.username} profile`} onClick={openAvatarPreview} /> : <span className="profile-large-avatar">{user.username.slice(0, 1).toUpperCase()}</span>}
               <div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : `Technician · ${user.teamCategory}`}</small></div>
             </div>
+            <label className="profile-option profile-change-photo"><span>{avatar ? 'Change photo' : 'Add profile photo'}</span><span className="choose-file">Choose image<input type="file" accept="image/*" onChange={handleAvatar} /></span></label>
             <button className="profile-option notification-option" onClick={handleNotifications}><span>Notifications</span><b>{notifications ? 'On' : 'Off'}</b></button>
             <button className="profile-signout" onClick={onLogout}>Sign out</button>
           </section>}
