@@ -14,7 +14,9 @@ async function handle(res) {
       const body = await res.json()
       if (body?.message) message = body.message
     } catch (_) { /* ignore parse errors */ }
-    throw new Error(message)
+    const error = new Error(message)
+    error.status = res.status
+    throw error
   }
   if (res.status === 204) return null
   const text = await res.text()
@@ -29,6 +31,7 @@ export const api = {
   getProfile: () => fetch(`${BASE}/profile`, { headers: headers() }).then(handle),
   updateProfilePhoto: (profileImage) => fetch(`${BASE}/profile/photo`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify({ profileImage }) }).then(handle),
   deleteProfilePhoto: () => fetch(`${BASE}/profile/photo`, { method: 'DELETE', headers: headers() }).then(handle),
+  changePassword: (payload) => fetch(`${BASE}/profile/password`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify(payload) }).then(handle),
   getAllTickets: () => fetch(`${BASE}/tickets`, { headers: headers() }).then(handle),
   getEscalated: () => fetch(`${BASE}/tickets/escalated`, { headers: headers() }).then(handle),
   getQueue: (category) => fetch(`${BASE}/tickets/queue/${category}`, { headers: headers() }).then(handle),
@@ -79,6 +82,12 @@ export const api = {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value))
     return fetch(`${BASE}/admin/work-rate?${query}`, { headers: headers() }).then(handle)
   },
+  createAdminAccount: (payload) => fetch(`${BASE}/admin/accounts`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify(payload),
+  }).then(handle),
+  getAdminAccounts: () => fetch(`${BASE}/admin/accounts`, { headers: headers() }).then(handle),
+  updateAdminStatus: (id, enabled) => fetch(`${BASE}/admin/accounts/${id}/status?enabled=${enabled}`, { method: 'PATCH', headers: headers() }).then(handle),
+  deleteAdminAccount: (id) => fetch(`${BASE}/admin/accounts/${id}`, { method: 'DELETE', headers: headers() }).then(handle),
   bulkUpdateTickets: (payload) => fetch(`${BASE}/admin/tickets/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify(payload) }).then(handle),
   exportTickets: () => fetch(`${BASE}/admin/tickets/export`, { headers: headers() }).then(async (res) => {
     if (!res.ok) return handle(res)

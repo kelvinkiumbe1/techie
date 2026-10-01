@@ -3,6 +3,7 @@ package com.ispticket.service;
 import com.ispticket.dto.AuthResponse;
 import com.ispticket.dto.LoginRequest;
 import com.ispticket.exception.NotFoundException;
+import com.ispticket.exception.UnauthorizedException;
 import com.ispticket.model.AppUser;
 import com.ispticket.model.enums.Role;
 import com.ispticket.repository.AppUserRepository;
@@ -33,6 +34,7 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         AppUser user = users.findByUsernameIgnoreCase(request.getUsername())
                 .orElseThrow(() -> new IllegalArgumentException("Invalid username or password"));
+        if (!user.isEnabled()) throw new UnauthorizedException("This account is disabled");
         if (!encoder.matches(request.getPassword(), user.getPasswordHash()))
             throw new IllegalArgumentException("Invalid username or password");
         String token = UUID.randomUUID().toString();
@@ -43,15 +45,21 @@ public class AuthService {
 
     @Transactional(readOnly = true)
     public AppUser authenticate(String token) {
-        if (token == null) throw new IllegalArgumentException("Authentication required");
+        if (token == null) throw new UnauthorizedException("Authentication required");
         return sessions.findByTokenHashAndExpiresAtAfter(hashToken(token), LocalDateTime.now())
                 .map(com.ispticket.model.AppSession::getUser)
-                .orElseThrow(() -> new IllegalArgumentException("Authentication required"));
+                .orElseThrow(() -> new UnauthorizedException("Authentication required"));
     }
 
     @Transactional
     public void logout(String token) {
         if (token != null) sessions.deleteByTokenHash(hashToken(token));
+    }
+    public void changePassword(AppUser user, String currentPassword, String newPassword) {
+        if (!encoder.matches(currentPassword, user.getPasswordHash()))
+            throw new UnauthorizedException("Current password is incorrect");
+        user.setPasswordHash(encoder.encode(newPassword));
+        users.save(user);
     }
     public AppUser createTechnicianAccount(String username, String password, Long technicianId,
                                            com.ispticket.model.enums.Category category) {
@@ -59,6 +67,35 @@ public class AuthService {
         AppUser user = new AppUser(username, encoder.encode(password), Role.TECHNICIAN);
         user.setTechnicianId(technicianId); user.setTeamCategory(category);
         return users.save(user);
+    }
+    public AppUser createAdminAccount(String username, String password) {
+        if (users.findByUsernameIgnoreCase(username).isPresent()) throw new IllegalArgumentException("Username already exists");
+        return users.save(new AppUser(username.trim(), encoder.encode(password), Role.ADMIN));
+    }
+    public void setUserEnabled(Long id, boolean enabled, Long currentUserId) {
+        AppUser user = users.findById(id).orElseThrow(() -> new NotFoundException("Account not found"));
+        if (user.getRole() != Role.ADMIN) throw new IllegalArgumentException("Only administrator accounts can be managed here");
+        if (user.getId().equals(currentUserId) && !enabled)
+            throw new IllegalArgumentException("You cannot disable your own account");
+        user.setEnabled(enabled);
+        users.save(user);
+    }
+    public void deleteAdminAccount(Long id, Long currentUserId) {
+        AppUser user = users.findById(id).orElseThrow(() -> new NotFoundException("Account not found"));
+        if (user.getRole() != Role.ADMIN) throw new IllegalArgumentException("Only administrator accounts can be managed here");
+        if (user.getId().equals(currentUserId)) throw new IllegalArgumentException("You cannot delete your own account");
+        sessions.deleteByUserId(user.getId());
+        users.delete(user);
+    }
+    public java.util.List<java.util.Map<String, Object>> adminAccounts() {
+        return users.findAll().stream()
+                .filter(user -> user.getRole() == Role.ADMIN)
+                .map(user -> java.util.Map.<String, Object>of(
+                        "id", user.getId(),
+                        "username", user.getUsername(),
+                        "role", user.getRole(),
+                        "enabled", user.isEnabled()))
+                .toList();
     }
     public void resetTechnicianPassword(Long technicianId, String password) {
         AppUser user = users.findAll().stream()

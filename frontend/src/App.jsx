@@ -16,14 +16,21 @@ export default function App() {
       setInstallEvent(event)
       if (localStorage.getItem('isp_install_dismissed') !== 'true') setShowInstall(true)
     }
+    const onInstalled = () => {
+      setInstallEvent(null)
+      setShowInstall(false)
+    }
     window.addEventListener('beforeinstallprompt', onInstallAvailable)
-    window.addEventListener('appinstalled', () => setShowInstall(false))
-    return () => window.removeEventListener('beforeinstallprompt', onInstallAvailable)
+    window.addEventListener('appinstalled', onInstalled)
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onInstallAvailable)
+      window.removeEventListener('appinstalled', onInstalled)
+    }
   }, [])
   function login(result) { localStorage.setItem('isp_user', JSON.stringify(result)); setUser(result) }
   async function install() {
     if (!installEvent) return
-    installEvent.prompt()
+    await installEvent.prompt()
     await installEvent.userChoice
     setInstallEvent(null)
     setShowInstall(false)

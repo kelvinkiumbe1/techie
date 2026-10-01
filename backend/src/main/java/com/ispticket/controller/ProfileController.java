@@ -1,6 +1,7 @@
 package com.ispticket.controller;
 
 import com.ispticket.dto.ProfilePhotoRequest;
+import com.ispticket.dto.PasswordChangeRequest;
 import com.ispticket.model.AppUser;
 import com.ispticket.service.AuthService;
 import com.ispticket.repository.AppUserRepository;
@@ -40,6 +41,13 @@ public class ProfileController {
         AppUser user = authService.authenticate(token);
         user.setProfileImage(null);
         users.save(user);
+    }
+
+    @PatchMapping("/password")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void changePassword(@RequestHeader(value = "X-Auth-Token", required = false) String token,
+                               @Valid @RequestBody PasswordChangeRequest request) {
+        authService.changePassword(authService.authenticate(token), request.getCurrentPassword(), request.getNewPassword());
     }
 
     private Map<String, Object> profile(AppUser user) {

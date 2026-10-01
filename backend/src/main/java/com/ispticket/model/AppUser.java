@@ -17,6 +17,7 @@ public class AppUser {
     @Column(nullable = false, unique = true) private String username;
     @JsonIgnore @Column(nullable = false) private String passwordHash;
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
+    @Column(nullable = false) private boolean enabled = true;
     private Long technicianId;
     @Enumerated(EnumType.STRING) private Category teamCategory;
     @Lob

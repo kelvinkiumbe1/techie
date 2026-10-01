@@ -10,8 +10,10 @@ import com.ispticket.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import java.util.List;
 import java.nio.charset.StandardCharsets;
 import com.ispticket.dto.BulkTicketRequest;
+import com.ispticket.dto.AdminAccountRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +23,38 @@ public class AdminController {
     private final AuthService authService; private final TicketRepository tickets;
     private final TechnicianRepository technicians;
     private final TicketService ticketService;
+    @GetMapping("/accounts")
+    public List<Map<String, Object>> accounts(@RequestHeader(value="X-Auth-Token", required=false) String token) {
+        requireAdmin(token);
+        return authService.adminAccounts();
+    }
+    @PostMapping("/accounts")
+    @ResponseStatus(org.springframework.http.HttpStatus.CREATED)
+    public Map<String, Object> createAdminAccount(
+            @RequestHeader(value="X-Auth-Token", required=false) String token,
+            @Valid @RequestBody AdminAccountRequest request) {
+        requireAdmin(token);
+        var account = authService.createAdminAccount(request.getUsername(), request.getPassword());
+        return Map.of("username", account.getUsername(), "role", account.getRole());
+    }
+
+    @PatchMapping("/accounts/{id}/status")
+    public void updateAccountStatus(@RequestHeader(value="X-Auth-Token", required=false) String token,
+                                    @PathVariable Long id, @RequestParam boolean enabled) {
+        var current = authService.authenticate(token);
+        if (current.getRole() != Role.ADMIN) throw new IllegalArgumentException("Admin access required");
+        authService.setUserEnabled(id, enabled, current.getId());
+    }
+
+    @DeleteMapping("/accounts/{id}")
+    @ResponseStatus(org.springframework.http.HttpStatus.NO_CONTENT)
+    public void deleteAccount(@RequestHeader(value="X-Auth-Token", required=false) String token,
+                              @PathVariable Long id) {
+        var current = authService.authenticate(token);
+        if (current.getRole() != Role.ADMIN) throw new IllegalArgumentException("Admin access required");
+        authService.deleteAdminAccount(id, current.getId());
+    }
+
     @GetMapping("/work-rate")
     public Map<String, Object> workRate(@RequestHeader(value="X-Auth-Token", required=false) String token,
                                         @RequestParam(required = false) Category category,

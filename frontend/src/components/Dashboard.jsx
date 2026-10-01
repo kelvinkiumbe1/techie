@@ -5,7 +5,7 @@ import IntakeForm from './IntakeForm.jsx'
 import CollaborationPanel from './CollaborationPanel.jsx'
 import DirectMessagePanel from './DirectMessagePanel.jsx'
 import AnalyticsPanel from './AnalyticsPanel.jsx'
-import { ImagePlus, LogOut, Trash2 } from 'lucide-react'
+import { Eye, EyeOff, ImagePlus, LogOut, Trash2 } from 'lucide-react'
 
 const POLL_MS = 20000
 
@@ -24,6 +24,7 @@ function NavIcon({ name }) {
 export default function Dashboard({ user, onLogout }) {
   const [tickets, setTickets] = useState([])
   const [technicians, setTechnicians] = useState([])
+  const [adminAccounts, setAdminAccounts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showIntake, setShowIntake] = useState(false)
@@ -45,23 +46,57 @@ export default function Dashboard({ user, onLogout }) {
   const [directTechnician, setDirectTechnician] = useState(null)
   const [technicianForm, setTechnicianForm] = useState({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
   const [technicianError, setTechnicianError] = useState('')
+  const [showAdminForm, setShowAdminForm] = useState(false)
+  const [adminForm, setAdminForm] = useState({ username: '', password: '' })
+  const [adminError, setAdminError] = useState('')
+  const [showTechnicianPassword, setShowTechnicianPassword] = useState(false)
+  const [showAdminPassword, setShowAdminPassword] = useState(false)
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
+  const [sortBy, setSortBy] = useState('newest')
+  const [quickFilter, setQuickFilter] = useState('')
   const [selectedTickets, setSelectedTickets] = useState([])
+  const [connectionStatus, setConnectionStatus] = useState('connected')
+  const [toast, setToast] = useState(null)
   const loadVersion = useRef(0)
   const previousTickets = useRef(null)
+
+  function notify(message, tone = 'success') {
+    setToast({ message, tone })
+    window.setTimeout(() => setToast(null), 3200)
+  }
 
   useEffect(() => {
     sessionStorage.setItem('isp_active_view', activeView)
   }, [activeView])
   useEffect(() => {
+    const closeOverlays = (event) => {
+      if (event.key !== 'Escape') return
+      setShowProfileActions(false)
+      setShowIntake(false)
+      setShowTechnicianForm(false)
+      setShowAdminForm(false)
+      setCollaborationTicket(null)
+      setDirectTechnician(null)
+      setFieldTicket(null)
+    }
+    window.addEventListener('keydown', closeOverlays)
+    return () => window.removeEventListener('keydown', closeOverlays)
+  }, [])
+  useEffect(() => {
     api.getProfile().then((profile) => {
       setAvatar(profile.profileImage || '')
       if (profile.profileImage) localStorage.removeItem('isp_avatar')
-    }).catch((error) => setError(error.message || 'Could not load profile.'))
-  }, [])
+    }).catch((error) => {
+      if (error.status === 401) {
+        onLogout()
+        return
+      }
+      setError(error.message || 'Could not load profile.')
+    })
+  }, [onLogout])
   function navigate(view) {
     setShowProfileActions(false)
     setDirectTechnician(null)
@@ -77,11 +112,12 @@ export default function Dashboard({ user, onLogout }) {
         api.getTechnicians(),
       ]
       if (user.role !== 'ADMIN') requests.push(api.getMyTechnician())
-      if (user.role === 'ADMIN') requests.push(api.getWorkRate(reportFilters))
+      if (user.role === 'ADMIN') requests.push(api.getWorkRate(reportFilters), api.getAdminAccounts())
       const results = await Promise.all(requests)
       if (version !== loadVersion.current) return
       const ticketData = results[0]
       const techData = results[1]
+      setConnectionStatus('connected')
       setTickets(ticketData)
       setTechnicians(techData)
       if (notifications && previousTickets.current) {
@@ -92,14 +128,24 @@ export default function Dashboard({ user, onLogout }) {
         })
         const added = ticketData.filter((ticket) => !previous.has(ticket.id))
         if (added.length || changed.length) {
-          new Notification('Techie Tracker update', { body: `${added.length + changed.length} ticket update${added.length + changed.length === 1 ? '' : 's'} require attention.` })
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('Techie Tracker update', { body: `${added.length + changed.length} ticket update${added.length + changed.length === 1 ? '' : 's'} require attention.` })
+          }
         }
       }
       previousTickets.current = ticketData
       if (user.role !== 'ADMIN') setMyTechnician(results[2])
-      if (user.role === 'ADMIN') setWorkRate(results[2])
+      if (user.role === 'ADMIN') {
+        setWorkRate(results[2])
+        setAdminAccounts(results[3])
+      }
       setError('')
     } catch (err) {
+      if (err.status === 401) {
+        onLogout()
+        return
+      }
+      setConnectionStatus('offline')
       setError('We could not load the latest requests. Check the connection and try again.')
     } finally {
       setLoading(false)
@@ -113,34 +159,64 @@ export default function Dashboard({ user, onLogout }) {
   }, [load])
 
   async function handleAssign(ticketId, technicianId) {
-    await api.assignTicket(ticketId, technicianId)
-    load()
+    try {
+      await api.assignTicket(ticketId, technicianId)
+      notify('Ticket assigned successfully')
+      load()
+    } catch (error) {
+      notify(error.message || 'Could not assign ticket', 'error')
+    }
   }
 
   async function handleStatusChange(ticketId, status) {
-    await api.updateStatus(ticketId, status)
-    load()
+    try {
+      await api.updateStatus(ticketId, status)
+      notify(status === 'RESOLVED' ? 'Ticket marked as resolved' : 'Ticket status updated')
+      load()
+    } catch (error) {
+      notify(error.message || 'Could not update ticket status', 'error')
+    }
   }
 
-  async function handleStartWork(ticketId) { await api.startWork(ticketId); load() }
-  async function handleStopWork(ticketId) { await api.stopWork(ticketId); load() }
+  async function handleStartWork(ticketId) {
+    try { await api.startWork(ticketId); notify('Work timer started'); load() } catch (error) { notify(error.message || 'Could not start work', 'error') }
+  }
+  async function handleStopWork(ticketId) {
+    try { await api.stopWork(ticketId); notify('Work timer stopped'); load() } catch (error) { notify(error.message || 'Could not stop work', 'error') }
+  }
   async function handleFieldUpdate() {
     if (!fieldTicket || !fieldNote.trim()) return
-    await api.fieldUpdate(fieldTicket.id, { note: fieldNote })
-    setFieldTicket(null); setFieldNote(''); load()
+    try {
+      await api.fieldUpdate(fieldTicket.id, { note: fieldNote })
+      setFieldTicket(null); setFieldNote(''); notify('Field update saved'); load()
+    } catch (error) {
+      notify(error.message || 'Could not save field update', 'error')
+    }
   }
-  async function handleMyStatus(e) { await api.updateMyStatus(e.target.value); load() }
+  async function handleMyStatus(e) {
+    try { await api.updateMyStatus(e.target.value); notify('Availability updated'); load() } catch (error) { notify(error.message || 'Could not update availability', 'error') }
+  }
   function handleAvatar(e) {
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
     reader.onload = async () => {
-      const value = String(reader.result)
-      try {
-        const profile = await api.updateProfilePhoto(value)
-        setAvatar(profile.profileImage); setFullscreenImage(profile.profileImage); localStorage.removeItem('isp_avatar')
-      } catch (error) { setError(error.message || 'Could not save profile photo.') }
+      const image = new Image()
+      image.onload = async () => {
+        const scale = Math.min(1, 1200 / Math.max(image.width, image.height))
+        const canvas = document.createElement('canvas')
+        canvas.width = Math.max(1, Math.round(image.width * scale))
+        canvas.height = Math.max(1, Math.round(image.height * scale))
+        canvas.getContext('2d').drawImage(image, 0, 0, canvas.width, canvas.height)
+        const value = canvas.toDataURL('image/jpeg', 0.82)
+        try {
+          const profile = await api.updateProfilePhoto(value)
+          setAvatar(profile.profileImage); setFullscreenImage(profile.profileImage); localStorage.removeItem('isp_avatar')
+        } catch (error) { setError(error.message || 'Could not save profile photo.') }
+      }
+      image.onerror = () => setError('Could not read the selected profile photo.')
+      image.src = String(reader.result)
     }
     reader.readAsDataURL(file)
   }
@@ -166,27 +242,47 @@ export default function Dashboard({ user, onLogout }) {
   }
 
   async function handleCreate(form) {
-    await api.createTicket(form)
-    setShowIntake(false)
-    load()
+    try {
+      await api.createTicket(form)
+      setShowIntake(false)
+      notify('Request logged successfully')
+      load()
+    } catch (error) {
+      notify(error.message || 'Could not log the request', 'error')
+      throw error
+    }
   }
   function toggleSelected(id) {
     setSelectedTickets((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
   }
   async function bulkUpdate(status) {
     if (!selectedTickets.length) return
-    await api.bulkUpdateTickets({ ticketIds: selectedTickets, status })
-    setSelectedTickets([]); load()
+    try {
+      await api.bulkUpdateTickets({ ticketIds: selectedTickets, status })
+      setSelectedTickets([]); notify(`${selectedTickets.length} ticket${selectedTickets.length === 1 ? '' : 's'} updated`); load()
+    } catch (error) {
+      notify(error.message || 'Could not update selected tickets', 'error')
+    }
   }
   async function exportTickets() {
-    const blob = await api.exportTickets()
-    const url = URL.createObjectURL(blob); const anchor = document.createElement('a')
-    anchor.href = url; anchor.download = 'tickets.csv'; anchor.click(); URL.revokeObjectURL(url)
+    try {
+      const blob = await api.exportTickets()
+      const url = URL.createObjectURL(blob); const anchor = document.createElement('a')
+      anchor.href = url; anchor.download = 'tickets.csv'; anchor.click(); URL.revokeObjectURL(url)
+      notify('CSV export downloaded')
+    } catch (error) {
+      notify(error.message || 'Could not export tickets', 'error')
+    }
   }
 
   async function handleTechStatus(tech) {
-    await api.updateTechnician(tech.id, { status: tech.status === 'OFF' ? 'AVAILABLE' : 'OFF' })
-    load()
+    try {
+      await api.updateTechnician(tech.id, { status: tech.status === 'OFF' ? 'AVAILABLE' : 'OFF' })
+      notify(tech.status === 'OFF' ? 'Technician enabled' : 'Technician disabled')
+      load()
+    } catch (error) {
+      notify(error.message || 'Could not update technician status', 'error')
+    }
   }
   function openTechnicianEditor(tech) {
     setOpenTechnicianMenu(null)
@@ -198,8 +294,13 @@ export default function Dashboard({ user, onLogout }) {
   async function handleDeleteTechnician(tech) {
     setOpenTechnicianMenu(null)
     if (!window.confirm(`Delete ${tech.name}'s account? Assigned tickets will be unassigned.`)) return
-    await api.deleteTechnician(tech.id)
-    load()
+    try {
+      await api.deleteTechnician(tech.id)
+      notify('Technician account deleted')
+      load()
+    } catch (error) {
+      notify(error.message || 'Could not delete technician account', 'error')
+    }
   }
   async function handleCreateTechnician(e) {
     e.preventDefault()
@@ -211,9 +312,42 @@ export default function Dashboard({ user, onLogout }) {
       } else {
         await api.createTechnician(technicianForm)
       }
+      async function handleCreateAdmin(e) {
+        e.preventDefault()
+        setAdminError('')
+        try {
+          await api.createAdminAccount(adminForm)
+          setAdminForm({ username: '', password: '' })
+          setShowAdminForm(false)
+          load()
+          notify('Administrator account created')
+        } catch (err) {
+          setAdminError(err.message || 'Could not create administrator account.')
+        }
+        async function handleAdminStatus(account) {
+          try {
+            await api.updateAdminStatus(account.id, !account.enabled)
+            notify(account.enabled ? 'Administrator disabled' : 'Administrator enabled')
+            load()
+          } catch (error) {
+            notify(error.message || 'Could not update administrator', 'error')
+          }
+        }
+        async function handleDeleteAdmin(account) {
+          if (!window.confirm(`Delete administrator ${account.username}?`)) return
+          try {
+            await api.deleteAdminAccount(account.id)
+            notify('Administrator account deleted')
+            load()
+          } catch (error) {
+            notify(error.message || 'Could not delete administrator', 'error')
+          }
+        }
+      }
       setTechnicianForm({ name: '', phone: '', username: '', password: '', teamCategory: 'SUPPORT' })
       setEditingTechnician(null)
       setShowTechnicianForm(false)
+      notify(editingTechnician ? 'Technician account updated' : 'Technician account created')
       load()
     } catch (err) {
       setTechnicianError(err.message || 'Could not create technician account.')
@@ -224,12 +358,28 @@ export default function Dashboard({ user, onLogout }) {
     const query = search.trim().toLowerCase()
     const matchesSearch = !query || [ticket.customerName, ticket.description, ticket.issueType, ticket.assignedTechnicianName]
       .filter(Boolean).some((value) => value.toLowerCase().includes(query))
-    return matchesSearch && (!statusFilter || ticket.status === statusFilter) &&
+    const matchesQuickFilter = quickFilter === 'urgent'
+      ? ticket.escalated || ticket.priority === 'URGENT'
+      : quickFilter === 'unassigned'
+        ? !ticket.assignedTechnicianId && !['RESOLVED', 'CANCELLED'].includes(ticket.status)
+        : quickFilter === 'active'
+          ? ticket.status === 'IN_PROGRESS'
+          : true
+    return matchesSearch && matchesQuickFilter && (!statusFilter || ticket.status === statusFilter) &&
       (!categoryFilter || ticket.category === categoryFilter) &&
       (!priorityFilter || ticket.priority === priorityFilter)
   })
-  const supportTickets = visibleTickets.filter((t) => t.category === 'SUPPORT')
-  const fiberTickets = visibleTickets.filter((t) => t.category === 'FIBER_INSTALL')
+  const sortedTickets = [...visibleTickets].sort((a, b) => {
+    if (sortBy === 'oldest') return (a.id || 0) - (b.id || 0)
+    if (sortBy === 'priority') {
+      const order = { URGENT: 0, HIGH: 1, NORMAL: 2, MEDIUM: 2, LOW: 3 }
+      return (order[a.priority] ?? 4) - (order[b.priority] ?? 4)
+    }
+    if (sortBy === 'wait') return (b.minutesOpen || 0) - (a.minutesOpen || 0)
+    return (b.id || 0) - (a.id || 0)
+  })
+  const supportTickets = sortedTickets.filter((t) => t.category === 'SUPPORT')
+  const fiberTickets = sortedTickets.filter((t) => t.category === 'FIBER_INSTALL')
   const escalatedCount = tickets.filter((t) => t.escalated).length
 
   return (
@@ -237,10 +387,10 @@ export default function Dashboard({ user, onLogout }) {
       <aside className="sidebar">
         <div className="sidebar-brand"><img className="brand-mark" src="/icons/icon.svg" alt="" /><div><strong>Techie Tracker</strong><small>Dispatch workspace</small></div></div>
         <nav className="main-nav" aria-label="Main navigation">
-          <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" /> Overview</button>
-          <button className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
-          <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" /> Messages</button>
-          {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
+          <button aria-current={activeView === 'overview' ? 'page' : undefined} className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" /> Overview</button>
+          <button aria-current={activeView === 'tickets' ? 'page' : undefined} className={activeView === 'tickets' ? 'active' : ''} onClick={() => navigate('tickets')}><NavIcon name="tickets" /> Tickets <b>{tickets.length}</b></button>
+          <button aria-current={activeView === 'messages' ? 'page' : undefined} className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" /> Messages</button>
+          {user.role === 'ADMIN' && <><button aria-current={activeView === 'technicians' ? 'page' : undefined} className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button aria-current={activeView === 'reports' ? 'page' : undefined} className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
         <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button className="sidebar-signout" onClick={onLogout} aria-label="Sign out"><LogOut size={15} aria-hidden="true" /><span>Sign out</span></button></div>
@@ -249,6 +399,7 @@ export default function Dashboard({ user, onLogout }) {
       <div className="topbar">
         <div className="topbar-brand">
           <span className="mobile-brand">Techie Tracker</span><span className="view-label">{activeView === 'overview' ? 'Overview' : activeView[0].toUpperCase() + activeView.slice(1)}</span>
+          <span className={`connection-indicator ${connectionStatus}`}><i />{connectionStatus === 'connected' ? 'Live' : 'Offline'}</span>
         </div>
         <div className="profile-trigger-wrap">
           <button className="profile-trigger" onClick={() => { setShowProfile(false); setShowProfileActions(true); setFullscreenImage(avatar) }} aria-label="Open profile actions">
@@ -273,12 +424,20 @@ export default function Dashboard({ user, onLogout }) {
           </div>
           <div className="queue-summary"><strong>{tickets.length}</strong><span>active requests</span></div>
         </section>}
+        {activeView === 'overview' && <section className="summary-cards" aria-label="Request summary">
+          <article><span className="summary-icon blue">◷</span><div><strong>{tickets.filter((ticket) => !['RESOLVED', 'CANCELLED'].includes(ticket.status)).length}</strong><span>Open requests</span></div></article>
+          <article><span className="summary-icon red">!</span><div><strong>{tickets.filter((ticket) => ticket.escalated || ticket.priority === 'URGENT').length}</strong><span>Needs attention</span></div></article>
+          <article><span className="summary-icon amber">＋</span><div><strong>{tickets.filter((ticket) => !ticket.assignedTechnicianId && !['RESOLVED', 'CANCELLED'].includes(ticket.status)).length}</strong><span>Unassigned</span></div></article>
+          <article><span className="summary-icon green">✓</span><div><strong>{tickets.filter((ticket) => ticket.status === 'RESOLVED').length}</strong><span>Resolved</span></div></article>
+        </section>}
         {(activeView === 'overview' || activeView === 'tickets') && <div className="queue-tools" aria-label="Ticket filters">
           <label className="search-field"><span>Search</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Customer, issue, technician..." /></label>
+          <label><span>Quick view</span><select value={quickFilter} onChange={(e) => setQuickFilter(e.target.value)}><option value="">All requests</option><option value="urgent">Needs attention</option><option value="unassigned">Unassigned</option><option value="active">In progress</option></select></label>
+          <label><span>Sort by</span><select value={sortBy} onChange={(e) => setSortBy(e.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option><option value="priority">Priority</option><option value="wait">Longest waiting</option></select></label>
           <label><span>Status</span><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All statuses</option><option value="NEW">New</option><option value="ASSIGNED">Assigned</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option></select></label>
         <label><span>Team</span><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">All teams</option><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber</option></select></label>
         <label><span>Priority</span><select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}><option value="">All priorities</option><option value="URGENT">Urgent</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></label>
-        {(search || statusFilter || categoryFilter || priorityFilter) && <button className="clear-filter" onClick={() => { setSearch(''); setStatusFilter(''); setCategoryFilter(''); setPriorityFilter('') }}>Clear filters</button>}
+        {(search || statusFilter || categoryFilter || priorityFilter || quickFilter) && <button className="clear-filter" onClick={() => { setSearch(''); setStatusFilter(''); setCategoryFilter(''); setPriorityFilter(''); setQuickFilter('') }}>Clear filters</button>}
         </div>}
         {user.role === 'ADMIN' && selectedTickets.length > 0 && <div className="bulk-actions"><strong>{selectedTickets.length} selected</strong><button onClick={() => bulkUpdate('IN_PROGRESS')}>Mark in progress</button><button onClick={() => bulkUpdate('RESOLVED')}>Resolve</button><button onClick={() => setSelectedTickets([])}>Clear selection</button></div>}
         {escalatedCount > 0 && (
@@ -341,7 +500,7 @@ export default function Dashboard({ user, onLogout }) {
          </div>
         </section>}
         {activeView === 'reports' && <AnalyticsPanel tickets={tickets} technicians={technicians} />}
-        {workRate && user.role === 'ADMIN' && (activeView === 'overview' || activeView === 'reports' || activeView === 'technicians') && (
+        {workRate && user.role === 'ADMIN' && (activeView === 'reports' || activeView === 'technicians') && (
           <section className="admin-panel">
             <div className="admin-panel-header">
               <h2>{activeView === 'technicians' ? 'Technician management' : 'Operations report'}</h2>
@@ -363,8 +522,10 @@ export default function Dashboard({ user, onLogout }) {
               <span><strong>{workRate.resolutionRate}%</strong> resolution rate</span>
             </div>}
             <div className="technician-list">
-              <div className="admin-subheader"><h3>Technician workload</h3>{activeView === 'technicians' && <button className="primary small-button" onClick={() => { setTechnicianError(''); setEditingTechnician(null); setShowTechnicianForm(true) }}>+ Create technician account</button>}</div>
-              {(workRate.technicianMetrics || []).map((metric) => {
+              <div className="admin-subheader"><div><h3>Technician workload</h3><p>Manage team access, roles, and assignments.</p></div>{activeView === 'technicians' && <div className="account-actions"><button className="small-button" onClick={() => { setAdminError(''); setShowAdminForm(true) }}>Create administrator</button><button className="primary small-button" onClick={() => { setTechnicianError(''); setEditingTechnician(null); setShowTechnicianForm(true) }}>Create technician</button></div>}</div>
+              {(workRate.technicianMetrics || []).length === 0 ? (
+                <div className="management-empty"><span className="management-empty-icon">＋</span><strong>No technicians yet</strong><p>Create a technician account to start assigning requests to your team.</p><button className="primary small-button" onClick={() => { setTechnicianError(''); setEditingTechnician(null); setShowTechnicianForm(true) }}>Create first technician</button></div>
+              ) : (workRate.technicianMetrics || []).map((metric) => {
                 const tech = technicians.find((item) => item.id === metric.technicianId)
                 return <div className="technician-row" key={metric.technicianId}>
                   <span><strong>{metric.name}</strong> <small>{metric.teamCategory}</small></span>
@@ -381,6 +542,13 @@ export default function Dashboard({ user, onLogout }) {
                 </div>
               })}
               </div>
+              {activeView === 'technicians' && <div className="admin-accounts">
+                <div className="admin-subheader"><div><h3>Administrator accounts</h3><p>Manage access without disabling your own account.</p></div></div>
+                {adminAccounts.map((account) => <div className="admin-account-row" key={account.id}>
+                  <span><strong>{account.username}</strong><small>{account.enabled ? 'Active' : 'Disabled'}</small></span>
+                  <div><button className="small-button" disabled={account.username === user.username} onClick={() => handleAdminStatus(account)}>{account.enabled ? 'Disable' : 'Enable'}</button><button className="small-button danger-button" disabled={account.username === user.username} onClick={() => handleDeleteAdmin(account)}>Delete</button></div>
+                </div>)}
+              </div>}
           </section>
         )}
       </div>
@@ -393,15 +561,22 @@ export default function Dashboard({ user, onLogout }) {
         <div className="field"><label>Work note</label><textarea value={fieldNote} onChange={(e) => setFieldNote(e.target.value)} placeholder="What did you find or change?" autoFocus /></div>
         <div className="drawer-actions"><button onClick={() => { setFieldTicket(null); setFieldNote('') }}>Cancel</button><button className="primary" onClick={handleFieldUpdate} disabled={!fieldNote.trim()}>Save update</button></div>
       </section></div>}
-      {showTechnicianForm && <div className="drawer-backdrop"><form className="drawer" onSubmit={handleCreateTechnician}>
-        <h2>{editingTechnician ? 'Edit technician account' : 'Create technician account'}</h2><p className="drawer-sub">{editingTechnician ? 'Update profile details or credentials.' : 'Create login details and place the technician on the correct team.'}</p>
+      {showTechnicianForm && <div className="drawer-backdrop"><form className="drawer account-drawer" onSubmit={handleCreateTechnician}>
+        <div className="drawer-heading"><div><p className="eyebrow">Team access</p><h2>{editingTechnician ? 'Edit technician account' : 'Create technician account'}</h2><p className="drawer-sub">{editingTechnician ? 'Update profile details or credentials.' : 'Create login details and place the technician on the correct team.'}</p></div><button type="button" className="drawer-close" aria-label="Close form" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>×</button></div>
         {technicianError && <div className="form-error">{technicianError}</div>}
-        <div className="field"><label>Full name<input required value={technicianForm.name} onChange={(e) => setTechnicianForm({ ...technicianForm, name: e.target.value })} placeholder="e.g. Alex Kamau" /></label></div>
-        <div className="field"><label>Phone number<input value={technicianForm.phone} onChange={(e) => setTechnicianForm({ ...technicianForm, phone: e.target.value })} placeholder="Optional" /></label></div>
+        <div className="account-form"><div className="field"><label>Full name<input required value={technicianForm.name} onChange={(e) => setTechnicianForm({ ...technicianForm, name: e.target.value })} placeholder="e.g. Alex Kamau" /></label></div>
+        <div className="field"><label>Phone number <span className="optional-label">Optional</span><input value={technicianForm.phone} onChange={(e) => setTechnicianForm({ ...technicianForm, phone: e.target.value })} placeholder="e.g. 0712 345 678" /></label></div>
         <div className="field"><label>Username<input required value={technicianForm.username} onChange={(e) => setTechnicianForm({ ...technicianForm, username: e.target.value })} placeholder="Login username" /></label></div>
-        <div className="field"><label>{editingTechnician ? 'New password (optional)' : 'Temporary password'}<input required={!editingTechnician} minLength="6" type="password" value={technicianForm.password} onChange={(e) => setTechnicianForm({ ...technicianForm, password: e.target.value })} placeholder={editingTechnician ? 'Leave blank to keep current password' : 'At least 6 characters'} /></label></div>
-        <div className="field"><label>Team<select value={technicianForm.teamCategory} onChange={(e) => setTechnicianForm({ ...technicianForm, teamCategory: e.target.value })}><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & Installation</option></select></label></div>
+        <div className="field"><label>{editingTechnician ? 'New password' : 'Temporary password'} {editingTechnician && <span className="optional-label">Optional</span>}<span className="password-input"><input required={!editingTechnician} minLength="6" type={showTechnicianPassword ? 'text' : 'password'} value={technicianForm.password} onChange={(e) => setTechnicianForm({ ...technicianForm, password: e.target.value })} placeholder={editingTechnician ? 'Leave blank to keep current password' : 'At least 6 characters'} /><button type="button" onClick={() => setShowTechnicianPassword((value) => !value)} aria-label={showTechnicianPassword ? 'Hide password' : 'Show password'}>{showTechnicianPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label></div>
+        <div className="field"><label>Team<select value={technicianForm.teamCategory} onChange={(e) => setTechnicianForm({ ...technicianForm, teamCategory: e.target.value })}><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & Installation</option></select></label></div></div>
         <div className="drawer-actions"><button type="button" onClick={() => { setShowTechnicianForm(false); setEditingTechnician(null) }}>Cancel</button><button className="primary">{editingTechnician ? 'Save changes' : 'Create account'}</button></div>
+      </form></div>}
+      {showAdminForm && <div className="drawer-backdrop"><form className="drawer account-drawer" onSubmit={handleCreateAdmin}>
+        <div className="drawer-heading"><div><p className="eyebrow">Secure access</p><h2>Create administrator account</h2><p className="drawer-sub">Create a separate login with access to technician management and reports.</p></div><button type="button" className="drawer-close" aria-label="Close form" onClick={() => setShowAdminForm(false)}>×</button></div>
+        {adminError && <div className="form-error">{adminError}</div>}
+        <div className="account-form"><div className="field"><label>Username<input required value={adminForm.username} onChange={(e) => setAdminForm({ ...adminForm, username: e.target.value })} placeholder="Administrator username" /></label></div>
+        <div className="field"><label>Password<span className="password-input"><input required minLength="6" type={showAdminPassword ? 'text' : 'password'} value={adminForm.password} onChange={(e) => setAdminForm({ ...adminForm, password: e.target.value })} placeholder="At least 6 characters" /><button type="button" onClick={() => setShowAdminPassword((value) => !value)} aria-label={showAdminPassword ? 'Hide password' : 'Show password'}>{showAdminPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button></span></label><p className="field-hint">Use a unique username and a strong password.</p></div></div>
+        <div className="drawer-actions"><button type="button" onClick={() => setShowAdminForm(false)}>Cancel</button><button className="primary">Create administrator</button></div>
       </form></div>}
       {activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       {showProfileActions && <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label="Profile actions" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }}>
@@ -420,6 +595,7 @@ export default function Dashboard({ user, onLogout }) {
           </div>
         </div>
       </div>}
+      {toast && <div className={`toast toast-${toast.tone}`} role="status">{toast.message}</div>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
         <button className={activeView === 'overview' ? 'active' : ''} onClick={() => navigate('overview')}><NavIcon name="home" />Home</button>
         <button className={activeView === 'messages' ? 'active' : ''} onClick={() => navigate('messages')}><NavIcon name="messages" />Messages</button>

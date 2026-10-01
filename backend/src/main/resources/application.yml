@@ -5,9 +5,9 @@ spring:
   application:
     name: isp-ticket-system
 
-  # --- Default: H2 in-memory, zero setup, resets on every restart ---
+  # --- Default: file-backed H2 for local development; data survives restarts ---
   datasource:
-    url: jdbc:h2:mem:ispdb;DB_CLOSE_DELAY=-1
+    url: jdbc:h2:file:./data/ispdb;AUTO_SERVER=TRUE
     driver-class-name: org.h2.Driver
     username: sa
     password:

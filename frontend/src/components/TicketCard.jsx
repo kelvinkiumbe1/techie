@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { formatTicketStatus, getTicketPriorityLabel } from '../utils/ticketUtils.js'
 
 const ISSUE_LABELS = {
   NO_INTERNET: 'No internet',
@@ -39,9 +40,9 @@ export default function TicketCard({ ticket, technicians, onAssign, onStatusChan
 
       <div className="ticket-meta">
         <span className={`pill pill-priority-${ticket.priority.toLowerCase()}`}>
-          {ticket.priority === 'URGENT' ? 'Urgent' : ticket.priority === 'NORMAL' ? 'Normal' : 'Low'}
+          {getTicketPriorityLabel(ticket.priority)}
         </span>
-        <span className="pill pill-status">{ticket.status.replace('_', ' ')}</span>
+        <span className="pill pill-status">{formatTicketStatus(ticket.status)}</span>
         <span>{ISSUE_LABELS[ticket.issueType] || ticket.issueType}</span>
         <span>· {CHANNEL_LABELS[ticket.channel] || ticket.channel}</span>
         {ticket.assignedTechnicianName && <span>· {ticket.assignedTechnicianName}</span>}

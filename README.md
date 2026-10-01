@@ -40,16 +40,19 @@ mvn spring-boot:run
 ```
 
 First run downloads dependencies from Maven Central, so you'll need internet
-access the first time. It uses an in-memory H2 database by default — zero
-setup, but data resets every restart. Two teams and four sample technicians
-are seeded automatically (see `src/main/resources/data.sql`).
+access the first time. It uses a file-backed H2 database by default for local
+development, so accounts, tickets, and sessions survive normal restarts. Two
+teams and four sample technicians are seeded automatically (see
+`src/main/resources/data.sql`).
 
 To check it's up: open http://localhost:8082/h2-console (JDBC URL
-`jdbc:h2:mem:ispdb`, user `sa`, no password) or just start the frontend and
-watch it load.
+`jdbc:h2:file:./data/ispdb`, user `sa`, no password) or just start the
+frontend and watch it load.
 
-**Switching to Postgres** (so data survives restarts): activate the `postgres`
-profile and set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` environment variables.
+**Switching to Postgres** for production: activate the `postgres` profile and
+set `DB_URL`, `DB_USERNAME`, and `DB_PASSWORD` environment variables. Never
+commit those values. Also set strong `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and
+the deployed frontend URL in `CORS_ORIGIN`.
 The profile is defined in `backend/src/main/resources/application-postgres.yml`.
 Uploaded files are stored in `uploads` by default; set `UPLOADS_DIRECTORY` to
 use another persistent location.
