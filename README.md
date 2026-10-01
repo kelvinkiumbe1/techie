@@ -9,7 +9,7 @@ that's been sitting too long.
 ## What's inside
 
 ```
-backend/    Spring Boot API (Java 17, Maven) — the data + routing logic
+backend/    Spring Boot API (Java 25, Maven) — the data + routing logic
 frontend/   React dashboard (Vite) — dispatcher view + intake form
 ```
 
@@ -30,7 +30,7 @@ frontend/   React dashboard (Vite) — dispatcher view + intake form
 
 ## Running it
 
-You'll need **Java 17+, Maven, and Node.js 18+** installed on your machine.
+You'll need **Java 25+, Maven, and Node.js 18+** installed on your machine.
 
 ### 1. Backend (runs on port 8082)
 
