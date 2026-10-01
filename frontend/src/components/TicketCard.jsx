@@ -25,7 +25,7 @@ function formatElapsed(minutes) {
   return `${hours}h ${mins}m open`
 }
 
-export default function TicketCard({ ticket, technicians, onAssign, onStatusChange, isAdmin, onCollaborate, onStartWork, onStopWork, onFieldUpdate }) {
+export default function TicketCard({ ticket, technicians, onAssign, onStatusChange, isAdmin, onCollaborate, onStartWork, onStopWork, onFieldUpdate, selected, onToggleSelected }) {
   const [selectedTech, setSelectedTech] = useState('')
 
   const eligibleTechs = technicians.filter((t) => t.team.category === ticket.category)
@@ -33,7 +33,7 @@ export default function TicketCard({ ticket, technicians, onAssign, onStatusChan
   return (
     <li className={`ticket-row${ticket.escalated ? ' is-escalated' : ''}`}>
       <div className="ticket-row-top">
-        <span className="ticket-customer">{ticket.customerName}</span>
+        <span className="ticket-customer">{isAdmin && <input type="checkbox" checked={selected} onChange={() => onToggleSelected(ticket.id)} aria-label={`Select ticket ${ticket.id}`} />} {ticket.customerName}</span>
         <span className="ticket-elapsed">{formatElapsed(ticket.minutesOpen)}</span>
       </div>
 

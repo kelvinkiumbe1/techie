@@ -10,10 +10,17 @@ import com.ispticket.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
+import java.nio.charset.StandardCharsets;
+import com.ispticket.dto.BulkTicketRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import com.ispticket.service.TicketService;
 @RestController @RequestMapping("/api/admin") @RequiredArgsConstructor
 public class AdminController {
     private final AuthService authService; private final TicketRepository tickets;
     private final TechnicianRepository technicians;
+    private final TicketService ticketService;
     @GetMapping("/work-rate")
     public Map<String, Object> workRate(@RequestHeader(value="X-Auth-Token", required=false) String token,
                                         @RequestParam(required = false) Category category,
@@ -48,5 +55,47 @@ public class AdminController {
                 "pendingTickets", own.stream().filter(t -> t.getStatus() != Status.RESOLVED && t.getStatus() != Status.CANCELLED).count(),
                 "resolvedTickets", resolved, "resolutionRate",
                 own.isEmpty() ? 0 : Math.round(resolved * 10000.0 / own.size()) / 100.0);
+    }
+
+    @PostMapping("/tickets/bulk")
+    public java.util.List<Map<String, Object>> bulkUpdate(
+            @RequestHeader(value="X-Auth-Token", required=false) String token,
+            @Valid @RequestBody BulkTicketRequest request) {
+        requireAdmin(token);
+        return request.getTicketIds().stream().map(id -> {
+            if (request.getTechnicianId() != null) ticketService.assign(id, request.getTechnicianId());
+            if (request.getStatus() != null) ticketService.updateStatus(id, request.getStatus());
+            Ticket ticket = tickets.findById(id).orElseThrow();
+            return Map.<String, Object>of("id", ticket.getId(), "status", ticket.getStatus());
+        }).toList();
+    }
+
+    @GetMapping(value = "/tickets/export", produces = "text/csv")
+    public ResponseEntity<byte[]> export(@RequestHeader(value="X-Auth-Token", required=false) String token) {
+        requireAdmin(token);
+        StringBuilder csv = new StringBuilder("id,customer,phone,category,issue,status,priority,technician,createdAt,resolvedAt\n");
+        tickets.findAll().forEach(ticket -> csv.append(csv(ticket.getId())).append(',')
+                .append(csv(ticket.getCustomer().getName())).append(',')
+                .append(csv(ticket.getCustomer().getPhone())).append(',')
+                .append(csv(ticket.getCategory())).append(',')
+                .append(csv(ticket.getIssueType())).append(',')
+                .append(csv(ticket.getStatus())).append(',')
+                .append(csv(ticket.getPriority())).append(',')
+                .append(csv(ticket.getAssignedTechnician() == null ? "" : ticket.getAssignedTechnician().getName())).append(',')
+                .append(csv(ticket.getCreatedAt())).append(',')
+                .append(csv(ticket.getResolvedAt())).append('\n'));
+        return ResponseEntity.ok().contentType(MediaType.parseMediaType("text/csv"))
+                .header("Content-Disposition", "attachment; filename=tickets.csv")
+                .body(csv.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    private void requireAdmin(String token) {
+        if (authService.authenticate(token).getRole() != Role.ADMIN)
+            throw new IllegalArgumentException("Admin access required");
+    }
+
+    private String csv(Object value) {
+        if (value == null) return "";
+        return "\"" + String.valueOf(value).replace("\"", "\"\"") + "\"";
     }
 }

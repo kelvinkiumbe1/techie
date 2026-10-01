@@ -22,6 +22,9 @@ async function handle(res) {
 }
 
 export const api = {
+  submitPublicTicket: (payload) => fetch(`${BASE}/public/tickets`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(handle),
+  trackPublicTickets: (phone) => fetch(`${BASE}/public/tickets/track?phone=${encodeURIComponent(phone)}`).then(handle),
+  ratePublicTicket: (id, payload) => fetch(`${BASE}/public/tickets/${id}/rate`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) }).then(handle),
   login: (payload) => fetch(`${BASE}/auth/login`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) }).then(handle),
   getAllTickets: () => fetch(`${BASE}/tickets`, { headers: headers() }).then(handle),
   getEscalated: () => fetch(`${BASE}/tickets/escalated`, { headers: headers() }).then(handle),
@@ -73,6 +76,11 @@ export const api = {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value))
     return fetch(`${BASE}/admin/work-rate?${query}`, { headers: headers() }).then(handle)
   },
+  bulkUpdateTickets: (payload) => fetch(`${BASE}/admin/tickets/bulk`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers() }, body: JSON.stringify(payload) }).then(handle),
+  exportTickets: () => fetch(`${BASE}/admin/tickets/export`, { headers: headers() }).then(async (res) => {
+    if (!res.ok) return handle(res)
+    return res.blob()
+  }),
   getMessages: (ticketId) => fetch(`${BASE}/tickets/${ticketId}/collaboration/messages`, { headers: headers() }).then(handle),
   sendMessage: (ticketId, message, file) => {
     const body = new FormData()

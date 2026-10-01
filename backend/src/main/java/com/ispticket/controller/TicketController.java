@@ -13,6 +13,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.stream.Stream;
 
 @RestController
 @RequestMapping("/api/tickets")
@@ -44,6 +46,27 @@ public class TicketController {
     public List<TicketResponse> getEscalated(@RequestHeader(value = "X-Auth-Token", required = false) String token) {
         return ticketService.getVisibleFor(authService.authenticate(token)).stream()
                 .filter(TicketResponse::isEscalated).toList();
+    }
+
+    @GetMapping("/search")
+    public List<TicketResponse> search(@RequestHeader(value = "X-Auth-Token", required = false) String token,
+                                       @RequestParam(required = false, defaultValue = "") String query,
+                                       @RequestParam(required = false) Status status,
+                                       @RequestParam(required = false) Category category,
+                                       @RequestParam(required = false) com.ispticket.model.enums.Priority priority,
+                                       @RequestParam(required = false) Long technicianId) {
+        AppUser user = authService.authenticate(token);
+        String needle = query.trim().toLowerCase(Locale.ROOT);
+        return ticketService.getVisibleFor(user).stream()
+                .filter(ticket -> needle.isBlank() || Stream.of(ticket.getCustomerName(), ticket.getDescription(),
+                        ticket.getIssueType().name(), ticket.getAssignedTechnicianName())
+                        .filter(java.util.Objects::nonNull)
+                        .anyMatch(value -> value.toLowerCase(Locale.ROOT).contains(needle)))
+                .filter(ticket -> status == null || ticket.getStatus() == status)
+                .filter(ticket -> category == null || ticket.getCategory() == category)
+                .filter(ticket -> priority == null || ticket.getPriority() == priority)
+                .filter(ticket -> technicianId == null || java.util.Objects.equals(ticket.getAssignedTechnicianId(), technicianId))
+                .toList();
     }
 
     @PatchMapping("/{id}/assign")

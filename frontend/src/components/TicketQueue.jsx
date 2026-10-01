@@ -1,7 +1,7 @@
 import React from 'react'
 import TicketCard from './TicketCard.jsx'
 
-export default function TicketQueue({ title, category, color, tickets, technicians, onAssign, onStatusChange, isAdmin, onCollaborate, onStartWork, onStopWork, onFieldUpdate }) {
+export default function TicketQueue({ title, category, color, tickets, technicians, onAssign, onStatusChange, isAdmin, onCollaborate, onStartWork, onStopWork, onFieldUpdate, selectedTickets, onToggleSelected }) {
   return (
     <div className="queue-column" style={{ '--team-color': color }}>
       <div className="queue-header">
@@ -25,6 +25,8 @@ export default function TicketQueue({ title, category, color, tickets, technicia
               onStartWork={onStartWork}
               onStopWork={onStopWork}
               onFieldUpdate={onFieldUpdate}
+              selected={selectedTickets.includes(ticket.id)}
+              onToggleSelected={onToggleSelected}
             />
           ))}
         </ul>

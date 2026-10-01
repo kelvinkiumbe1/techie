@@ -46,6 +46,7 @@ export default function Dashboard({ user, onLogout }) {
   const [statusFilter, setStatusFilter] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('')
   const [priorityFilter, setPriorityFilter] = useState('')
+  const [selectedTickets, setSelectedTickets] = useState([])
   const loadVersion = useRef(0)
   const previousTickets = useRef(null)
 
@@ -141,6 +142,19 @@ export default function Dashboard({ user, onLogout }) {
     await api.createTicket(form)
     setShowIntake(false)
     load()
+  }
+  function toggleSelected(id) {
+    setSelectedTickets((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+  }
+  async function bulkUpdate(status) {
+    if (!selectedTickets.length) return
+    await api.bulkUpdateTickets({ ticketIds: selectedTickets, status })
+    setSelectedTickets([]); load()
+  }
+  async function exportTickets() {
+    const blob = await api.exportTickets()
+    const url = URL.createObjectURL(blob); const anchor = document.createElement('a')
+    anchor.href = url; anchor.download = 'tickets.csv'; anchor.click(); URL.revokeObjectURL(url)
   }
 
   async function handleTechStatus(tech) {
@@ -248,6 +262,7 @@ export default function Dashboard({ user, onLogout }) {
         <label><span>Priority</span><select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}><option value="">All priorities</option><option value="URGENT">Urgent</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></label>
         {(search || statusFilter || categoryFilter || priorityFilter) && <button className="clear-filter" onClick={() => { setSearch(''); setStatusFilter(''); setCategoryFilter(''); setPriorityFilter('') }}>Clear filters</button>}
         </div>}
+        {user.role === 'ADMIN' && selectedTickets.length > 0 && <div className="bulk-actions"><strong>{selectedTickets.length} selected</strong><button onClick={() => bulkUpdate('IN_PROGRESS')}>Mark in progress</button><button onClick={() => bulkUpdate('RESOLVED')}>Resolve</button><button onClick={() => setSelectedTickets([])}>Clear selection</button></div>}
         {escalatedCount > 0 && (
           <div className="escalation-banner">
             <span className="escalation-dot" />
@@ -273,6 +288,7 @@ export default function Dashboard({ user, onLogout }) {
               isAdmin={user.role === 'ADMIN'}
               onCollaborate={setCollaborationTicket}
               onStartWork={handleStartWork} onStopWork={handleStopWork} onFieldUpdate={setFieldTicket}
+              selectedTickets={selectedTickets} onToggleSelected={toggleSelected}
             />
             <TicketQueue
               title="Fiber & Installation"
@@ -285,6 +301,7 @@ export default function Dashboard({ user, onLogout }) {
               isAdmin={user.role === 'ADMIN'}
               onCollaborate={setCollaborationTicket}
               onStartWork={handleStartWork} onStopWork={handleStopWork} onFieldUpdate={setFieldTicket}
+              selectedTickets={selectedTickets} onToggleSelected={toggleSelected}
             />
           </div>}
           </>
@@ -310,6 +327,7 @@ export default function Dashboard({ user, onLogout }) {
           <section className="admin-panel">
             <div className="admin-panel-header">
               <h2>{activeView === 'technicians' ? 'Technician management' : 'Operations report'}</h2>
+              {activeView === 'reports' && <button className="small-button" onClick={exportTickets}>Export CSV</button>}
               <div className="report-filters">
                 <select value={reportFilters.category} onChange={(e) => setReportFilters({ ...reportFilters, category: e.target.value })}>
                   <option value="">All teams</option><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber & installation</option>

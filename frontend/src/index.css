@@ -132,6 +132,13 @@ textarea:focus-visible {
   width: 100%;
   margin: 0 auto;
 }
+.portal-link { display:block; margin:14px auto; border:0; background:transparent; color:var(--ink); text-decoration:underline; cursor:pointer; }
+.customer-portal { min-height:100%; display:grid; place-items:center; padding:24px; background:var(--paper); }
+.portal-card { width:min(520px,100%); padding:26px; background:var(--panel); border:1px solid var(--border); border-radius:10px; box-shadow:0 12px 28px rgba(78,4,1,.12); }
+.portal-card h1 { margin:0 0 18px; }.portal-back { border:0; background:transparent; color:var(--ink); cursor:pointer; padding:0 0 20px; }
+.portal-tabs { display:flex; gap:8px; border-bottom:1px solid var(--border); margin-bottom:18px; }.portal-tabs button { padding:10px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--text-muted); cursor:pointer; }.portal-tabs button.active { border-color:var(--support); color:var(--ink); font-weight:700; }
+.portal-form { display:grid; gap:14px; }.portal-form label { display:grid; gap:5px; font-size:12px; font-weight:700; }.portal-form input, .portal-form select, .portal-form textarea { width:100%; padding:10px; border:1px solid var(--border); border-radius:var(--radius); background:#fff; font:inherit; }.portal-form textarea { min-height:100px; resize:vertical; }.success-state { padding:10px; margin-bottom:12px; background:#e7f5e9; color:#246b31; border:1px solid #add7b4; border-radius:var(--radius); font-size:12px; }.portal-results { display:grid; gap:8px; }.portal-results article { display:grid; gap:4px; padding:12px; border:1px solid var(--border); border-radius:var(--radius); }.portal-results span, .portal-results p { margin:0; color:var(--text-muted); font-size:12px; }
+.bulk-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin:12px 0; padding:10px 12px; background:var(--urgent-soft); border:1px solid #efb4a9; border-radius:var(--radius); font-size:12px; }.bulk-actions button { padding:7px 10px; border:1px solid var(--border); border-radius:var(--radius); background:#fff; color:var(--ink); cursor:pointer; }
 
 .analytics-panel { margin-top: 20px; }
 .analytics-header h2 { margin: 0; font-size: 20px; }

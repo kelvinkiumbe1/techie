@@ -1,6 +1,7 @@
 import React from 'react'
 import Dashboard from './components/Dashboard.jsx'
 import Login from './components/Login.jsx'
+import CustomerPortal from './components/CustomerPortal.jsx'
 import { setToken } from './api.js'
 import { useEffect, useState } from 'react'
 
@@ -8,6 +9,7 @@ export default function App() {
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('isp_user') || 'null'))
   const [installEvent, setInstallEvent] = useState(null)
   const [showInstall, setShowInstall] = useState(false)
+  const [showCustomerPortal, setShowCustomerPortal] = useState(false)
   useEffect(() => {
     const onInstallAvailable = (event) => {
       event.preventDefault()
@@ -31,7 +33,7 @@ export default function App() {
     setShowInstall(false)
   }
   const content = !user
-    ? <Login onLogin={login} />
+    ? showCustomerPortal ? <CustomerPortal onBack={() => setShowCustomerPortal(false)} /> : <><Login onLogin={login} /><button className="portal-link" onClick={() => setShowCustomerPortal(true)}>Customer? Report or track a request</button></>
     : <Dashboard user={user} onLogout={() => { setToken(null); localStorage.removeItem('isp_user'); setUser(null) }} />
   return <>
     {content}
