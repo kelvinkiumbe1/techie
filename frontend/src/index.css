@@ -85,7 +85,7 @@ textarea:focus-visible {
 .avatar-edit-button { position:absolute; right:12px; bottom:12px; width:44px; height:44px; display:grid; place-items:center; border:3px solid #fff; border-radius:50%; background:var(--support); color:var(--ink); box-shadow:0 4px 14px rgba(0,0,0,.3); cursor:pointer; font-size:20px; transition:transform .15s, background .15s; }.avatar-edit-button:hover { background:#f4a64f; transform:scale(1.06); }
 .avatar-edit-button input, .avatar-photo-action input { position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
 .avatar-lightbox-actions { display:flex; gap:8px; margin-top:8px; }
-.avatar-photo-action { display:inline-flex; align-items:center; gap:6px; padding:9px 12px; border:1px solid rgba(255,255,255,.45); border-radius:7px; background:rgba(255,255,255,.12); color:#fff; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }
+.avatar-photo-action { display:inline-flex; align-items:center; justify-content:center; gap:7px; padding:9px 12px; border:1px solid rgba(255,255,255,.45); border-radius:7px; background:rgba(255,255,255,.12); color:#fff; font:inherit; font-size:12px; font-weight:700; cursor:pointer; }.avatar-photo-action svg { flex:none; }
 .avatar-photo-action.primary { background:#fff; color:var(--ink); border-color:#fff; }
 .avatar-photo-action.danger { color:#ffd4d4; border-color:#d98b8b; }
 .avatar-photo-action.signout { color:#f4c99b; border-color:#b36b58; }

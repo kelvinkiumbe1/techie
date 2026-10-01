@@ -5,6 +5,7 @@ import IntakeForm from './IntakeForm.jsx'
 import CollaborationPanel from './CollaborationPanel.jsx'
 import DirectMessagePanel from './DirectMessagePanel.jsx'
 import AnalyticsPanel from './AnalyticsPanel.jsx'
+import { ImagePlus, LogOut, Trash2, X } from 'lucide-react'
 
 const POLL_MS = 20000
 
@@ -230,7 +231,7 @@ export default function Dashboard({ user, onLogout }) {
           {user.role === 'ADMIN' && <><button className={activeView === 'technicians' ? 'active' : ''} onClick={() => navigate('technicians')}><NavIcon name="staff" /> Technicians</button><button className={activeView === 'reports' ? 'active' : ''} onClick={() => navigate('reports')}><NavIcon name="reports" /> Reports</button></>}
         </nav>
         <div className="sidebar-spacer" />
-        <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button className="sidebar-signout" onClick={onLogout} aria-label="Sign out"><span aria-hidden="true">↪</span><span>Sign out</span></button></div>
+        <div className="sidebar-user"><span className="user-avatar">{user.username.slice(0, 1).toUpperCase()}</span><div><strong>{user.username}</strong><small>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</small></div><button className="sidebar-signout" onClick={onLogout} aria-label="Sign out"><LogOut size={15} aria-hidden="true" /><span>Sign out</span></button></div>
       </aside>
       <div className="workspace">
       <div className="topbar">
@@ -393,21 +394,18 @@ export default function Dashboard({ user, onLogout }) {
       {activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       {showProfileActions && <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label="Profile actions" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }}>
         <div className="avatar-lightbox-card" onClick={(e) => e.stopPropagation()}>
-          <button className="avatar-lightbox-close" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }} aria-label="Close profile actions">×</button>
+          <button className="avatar-lightbox-close" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }} aria-label="Close profile actions"><X size={20} strokeWidth={2.2} /></button>
           <div className="avatar-lightbox-image-wrap">
             {fullscreenImage ? <img src={fullscreenImage} alt={`${user.username} profile enlarged`} /> : <span className="avatar-lightbox-placeholder">{user.username.slice(0, 1).toUpperCase()}</span>}
-            <label className="avatar-edit-button" title="Change profile photo" aria-label="Change profile photo">
-              <span aria-hidden="true">✎</span><input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setShowProfileActions(true) }} />
-            </label>
           </div>
           <strong>{user.username}</strong><span>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</span>
           <div className="avatar-lightbox-actions">
             <label className="avatar-photo-action primary" title="Upload a new profile photo">
-              <span aria-hidden="true">✎</span> Change photo
+              <ImagePlus size={17} aria-hidden="true" /> Change photo
               <input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setFullscreenImage('') }} />
             </label>
-            <button className="avatar-photo-action danger" onClick={removeAvatar}><span aria-hidden="true">⌫</span> Delete photo</button>
-            <button className="avatar-photo-action signout" onClick={onLogout}><span aria-hidden="true">↪</span> Sign out</button>
+            <button className="avatar-photo-action danger" onClick={removeAvatar}><Trash2 size={17} aria-hidden="true" /> Delete photo</button>
+            <button className="avatar-photo-action signout" onClick={onLogout}><LogOut size={17} aria-hidden="true" /> Sign out</button>
           </div>
         </div>
       </div>}
