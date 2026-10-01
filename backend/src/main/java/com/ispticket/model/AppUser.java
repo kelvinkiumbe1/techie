@@ -19,6 +19,9 @@ public class AppUser {
     @Enumerated(EnumType.STRING) @Column(nullable = false) private Role role;
     private Long technicianId;
     @Enumerated(EnumType.STRING) private Category teamCategory;
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String profileImage;
 
     public AppUser(String username, String passwordHash, Role role) {
         this.username = username; this.passwordHash = passwordHash; this.role = role;

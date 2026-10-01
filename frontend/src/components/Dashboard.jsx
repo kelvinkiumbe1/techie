@@ -56,6 +56,12 @@ export default function Dashboard({ user, onLogout }) {
   useEffect(() => {
     sessionStorage.setItem('isp_active_view', activeView)
   }, [activeView])
+  useEffect(() => {
+    api.getProfile().then((profile) => {
+      setAvatar(profile.profileImage || '')
+      if (profile.profileImage) localStorage.removeItem('isp_avatar')
+    }).catch((error) => setError(error.message || 'Could not load profile.'))
+  }, [])
   function navigate(view) {
     setShowProfileActions(false)
     setDirectTechnician(null)
@@ -129,7 +135,13 @@ export default function Dashboard({ user, onLogout }) {
     if (!file) return
     if (!file.type.startsWith('image/')) return
     const reader = new FileReader()
-    reader.onload = () => { const value = String(reader.result); setAvatar(value); setFullscreenImage(value); localStorage.setItem('isp_avatar', value) }
+    reader.onload = async () => {
+      const value = String(reader.result)
+      try {
+        const profile = await api.updateProfilePhoto(value)
+        setAvatar(profile.profileImage); setFullscreenImage(profile.profileImage); localStorage.removeItem('isp_avatar')
+      } catch (error) { setError(error.message || 'Could not save profile photo.') }
+    }
     reader.readAsDataURL(file)
   }
   function openAvatarPreview(e) {
@@ -141,7 +153,7 @@ export default function Dashboard({ user, onLogout }) {
     setAvatar('')
     setFullscreenImage('')
     setShowProfileActions(true)
-    localStorage.removeItem('isp_avatar')
+    api.deleteProfilePhoto().then(() => localStorage.removeItem('isp_avatar')).catch((error) => setError(error.message || 'Could not delete profile photo.'))
   }
   async function handleNotifications() {
     if (!('Notification' in window)) return
