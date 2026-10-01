@@ -5,7 +5,7 @@ import IntakeForm from './IntakeForm.jsx'
 import CollaborationPanel from './CollaborationPanel.jsx'
 import DirectMessagePanel from './DirectMessagePanel.jsx'
 import AnalyticsPanel from './AnalyticsPanel.jsx'
-import { ImagePlus, LogOut, Trash2, X } from 'lucide-react'
+import { ImagePlus, LogOut, Trash2 } from 'lucide-react'
 
 const POLL_MS = 20000
 
@@ -394,7 +394,6 @@ export default function Dashboard({ user, onLogout }) {
       {activeView !== 'messages' && <button className="floating-action" onClick={() => setShowIntake(true)} aria-label="Log new request">+</button>}
       {showProfileActions && <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label="Profile actions" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }}>
         <div className="avatar-lightbox-card" onClick={(e) => e.stopPropagation()}>
-          <button className="avatar-lightbox-close" onClick={() => { setShowProfileActions(false); setFullscreenImage('') }} aria-label="Close profile actions"><X size={20} strokeWidth={2.2} /></button>
           <div className="avatar-lightbox-image-wrap">
             {fullscreenImage ? <img src={fullscreenImage} alt={`${user.username} profile enlarged`} /> : <span className="avatar-lightbox-placeholder">{user.username.slice(0, 1).toUpperCase()}</span>}
           </div>
