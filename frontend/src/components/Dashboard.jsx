@@ -4,6 +4,7 @@ import TicketQueue from './TicketQueue.jsx'
 import IntakeForm from './IntakeForm.jsx'
 import CollaborationPanel from './CollaborationPanel.jsx'
 import DirectMessagePanel from './DirectMessagePanel.jsx'
+import AnalyticsPanel from './AnalyticsPanel.jsx'
 
 const POLL_MS = 20000
 
@@ -43,7 +44,10 @@ export default function Dashboard({ user, onLogout }) {
   const [technicianError, setTechnicianError] = useState('')
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [priorityFilter, setPriorityFilter] = useState('')
   const loadVersion = useRef(0)
+  const previousTickets = useRef(null)
 
   useEffect(() => {
     sessionStorage.setItem('isp_active_view', activeView)
@@ -69,6 +73,18 @@ export default function Dashboard({ user, onLogout }) {
       const techData = results[1]
       setTickets(ticketData)
       setTechnicians(techData)
+      if (notifications && previousTickets.current) {
+        const previous = new Map(previousTickets.current.map((ticket) => [ticket.id, ticket]))
+        const changed = ticketData.filter((ticket) => {
+          const old = previous.get(ticket.id)
+          return old && (old.status !== ticket.status || (!old.escalated && ticket.escalated))
+        })
+        const added = ticketData.filter((ticket) => !previous.has(ticket.id))
+        if (added.length || changed.length) {
+          new Notification('Techie Tracker update', { body: `${added.length + changed.length} ticket update${added.length + changed.length === 1 ? '' : 's'} require attention.` })
+        }
+      }
+      previousTickets.current = ticketData
       if (user.role !== 'ADMIN') setMyTechnician(results[2])
       if (user.role === 'ADMIN') setWorkRate(results[2])
       setError('')
@@ -77,7 +93,7 @@ export default function Dashboard({ user, onLogout }) {
     } finally {
       setLoading(false)
     }
-  }, [reportFilters, user.role])
+  }, [notifications, reportFilters, user.role])
 
   useEffect(() => {
     load()
@@ -167,7 +183,9 @@ export default function Dashboard({ user, onLogout }) {
     const query = search.trim().toLowerCase()
     const matchesSearch = !query || [ticket.customerName, ticket.description, ticket.issueType, ticket.assignedTechnicianName]
       .filter(Boolean).some((value) => value.toLowerCase().includes(query))
-    return matchesSearch && (!statusFilter || ticket.status === statusFilter)
+    return matchesSearch && (!statusFilter || ticket.status === statusFilter) &&
+      (!categoryFilter || ticket.category === categoryFilter) &&
+      (!priorityFilter || ticket.priority === priorityFilter)
   })
   const supportTickets = visibleTickets.filter((t) => t.category === 'SUPPORT')
   const fiberTickets = visibleTickets.filter((t) => t.category === 'FIBER_INSTALL')
@@ -226,7 +244,9 @@ export default function Dashboard({ user, onLogout }) {
         {(activeView === 'overview' || activeView === 'tickets') && <div className="queue-tools" aria-label="Ticket filters">
           <label className="search-field"><span>Search</span><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Customer, issue, technician..." /></label>
           <label><span>Status</span><select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}><option value="">All statuses</option><option value="NEW">New</option><option value="ASSIGNED">Assigned</option><option value="IN_PROGRESS">In progress</option><option value="RESOLVED">Resolved</option></select></label>
-          {(search || statusFilter) && <button className="clear-filter" onClick={() => { setSearch(''); setStatusFilter('') }}>Clear filters</button>}
+        <label><span>Team</span><select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}><option value="">All teams</option><option value="SUPPORT">Support</option><option value="FIBER_INSTALL">Fiber</option></select></label>
+        <label><span>Priority</span><select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}><option value="">All priorities</option><option value="URGENT">Urgent</option><option value="HIGH">High</option><option value="MEDIUM">Medium</option><option value="LOW">Low</option></select></label>
+        {(search || statusFilter || categoryFilter || priorityFilter) && <button className="clear-filter" onClick={() => { setSearch(''); setStatusFilter(''); setCategoryFilter(''); setPriorityFilter('') }}>Clear filters</button>}
         </div>}
         {escalatedCount > 0 && (
           <div className="escalation-banner">
@@ -285,6 +305,7 @@ export default function Dashboard({ user, onLogout }) {
              </button>)}
          </div>
         </section>}
+        {activeView === 'reports' && <AnalyticsPanel tickets={tickets} technicians={technicians} />}
         {workRate && user.role === 'ADMIN' && (activeView === 'overview' || activeView === 'reports' || activeView === 'technicians') && (
           <section className="admin-panel">
             <div className="admin-panel-header">
