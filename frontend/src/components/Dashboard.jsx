@@ -133,6 +133,11 @@ export default function Dashboard({ user, onLogout }) {
     e.stopPropagation()
     if (avatar) setFullscreenImage(avatar)
   }
+  function removeAvatar() {
+    setAvatar('')
+    setFullscreenImage('')
+    localStorage.removeItem('isp_avatar')
+  }
   async function handleNotifications() {
     if (!('Notification' in window)) return
     if (Notification.permission === 'denied') return
@@ -394,8 +399,21 @@ export default function Dashboard({ user, onLogout }) {
       {fullscreenImage && <div className="avatar-lightbox" role="dialog" aria-modal="true" aria-label="Profile photo preview" onClick={() => setFullscreenImage('')}>
         <div className="avatar-lightbox-card" onClick={(e) => e.stopPropagation()}>
           <button className="avatar-lightbox-close" onClick={() => setFullscreenImage('')} aria-label="Close profile photo">×</button>
-          <img src={fullscreenImage} alt={`${user.username} profile enlarged`} />
+          <div className="avatar-lightbox-image-wrap">
+            <img src={fullscreenImage} alt={`${user.username} profile enlarged`} />
+            <label className="avatar-edit-button" title="Change profile photo" aria-label="Change profile photo">
+              <span aria-hidden="true">✎</span>
+              <input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setFullscreenImage('') }} />
+            </label>
+          </div>
           <strong>{user.username}</strong><span>{user.role === 'ADMIN' ? 'Administrator' : 'Technician'}</span>
+          <div className="avatar-lightbox-actions">
+            <label className="avatar-photo-action primary" title="Upload a new profile photo">
+              <span aria-hidden="true">✎</span> Change photo
+              <input type="file" accept="image/*" onChange={(e) => { handleAvatar(e); setFullscreenImage('') }} />
+            </label>
+            <button className="avatar-photo-action danger" onClick={removeAvatar}><span aria-hidden="true">⌫</span> Delete photo</button>
+          </div>
         </div>
       </div>}
       <nav className="mobile-nav" aria-label="Mobile navigation">
