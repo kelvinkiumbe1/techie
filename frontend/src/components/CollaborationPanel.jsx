@@ -151,6 +151,17 @@ export default function CollaborationPanel({ ticket, onClose }) {
     if (remoteVideo.current) remoteVideo.current.srcObject = null
     setCallState('idle')
   }
+  function handleComposerKeyDown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send(e)
+    }
+  }
+  function resizeComposer(e) {
+    e.currentTarget.style.height = 'auto'
+    e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 140)}px`
+    setText(e.target.value)
+  }
 
   return <aside className="collaboration-panel">
     <div className="collab-header"><div><strong>{ticket.assignedTechnicianName ? 'Contact technician' : 'Ticket collaboration'}</strong><div className="ticket-meta">Ticket #{ticket.id} · {ticket.customerName}{ticket.assignedTechnicianName ? ` · ${ticket.assignedTechnicianName}` : ''}</div></div><button onClick={onClose}>Close</button></div>
@@ -158,6 +169,22 @@ export default function CollaborationPanel({ ticket, onClose }) {
     {callState !== 'idle' && <div className="call-media"><video ref={localVideo} autoPlay muted playsInline /><video ref={remoteVideo} autoPlay playsInline /></div>}
     {camera && <video className="camera-preview" ref={localVideo} autoPlay muted playsInline />}
     {callError && <small className="error">{callError}</small>}
-    <form className="message-composer" onSubmit={send}><textarea value={text} onChange={e => setText(e.target.value)} placeholder="Write a message…" /><div className="composer-actions"><label>Attach<input type="file" accept="image/*,video/*,.pdf,.txt" onChange={e => setFile(e.target.files[0])} /></label><button type="button" onClick={capture}>{camera ? 'Capture' : 'Camera'}</button>{callState === 'idle' ? <button type="button" onClick={startCall}>Start call</button> : <button type="button" onClick={() => hangUp()}>Hang up ({callState})</button>}<button className="primary">Send</button></div>{file && <small>{file.name}</small>}</form>
+    <form className="message-composer" onSubmit={send}>
+      <div className="composer-main">
+        <textarea rows="1" value={text} onChange={resizeComposer} onKeyDown={handleComposerKeyDown} placeholder="Write a message…" aria-label="Write a message" />
+        <button className="send-icon" disabled={!text.trim() && !file} aria-label="Send message" title="Send message">
+          <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" /><path d="M6 12h16" /></svg>
+        </button>
+      </div>
+      {file && <div className="composer-attachment"><span>Attached</span><strong>{file.name}</strong><button type="button" onClick={() => setFile(null)} aria-label="Remove attachment">×</button></div>}
+      <div className="composer-footer">
+        <div className="composer-tools">
+          <label className="composer-tool" title="Attach a file">＋ Attach<input type="file" accept="image/*,video/*,.pdf,.txt" onChange={e => setFile(e.target.files[0])} /></label>
+          <button type="button" className="composer-tool" onClick={capture}>{camera ? 'Capture photo' : 'Camera'}</button>
+          {callState === 'idle' ? <button type="button" className="composer-tool" onClick={startCall}>Start call</button> : <button type="button" className="composer-tool danger" onClick={() => hangUp()}>Hang up</button>}
+        </div>
+        <span>{text.length}/2000 · Enter to send</span>
+      </div>
+    </form>
   </aside>
 }

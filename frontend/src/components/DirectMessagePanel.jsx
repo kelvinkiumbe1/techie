@@ -28,6 +28,11 @@ export default function DirectMessagePanel({ technician, onClose }) {
       send(e)
     }
   }
+  function resize(e) {
+    e.currentTarget.style.height = 'auto'
+    e.currentTarget.style.height = `${Math.min(e.currentTarget.scrollHeight, 140)}px`
+    setText(e.target.value)
+  }
 
   const phone = technician.phone?.replace(/[^\d+]/g, '')
   function callTechnician() {
@@ -52,15 +57,15 @@ export default function DirectMessagePanel({ technician, onClose }) {
     </div>
     {error && <small className="error">{error}</small>}
     <form className="message-composer" onSubmit={send}>
-      <div className="message-input-wrap">
-        <textarea rows="2" value={text} onChange={(e) => setText(e.target.value)} onKeyDown={handleKeyDown} placeholder={`Message ${technician.name}…`} />
-        {text.trim() && <button className="send-icon" aria-label="Send message" title="Send message">
+      <div className="composer-main">
+        <textarea rows="1" value={text} onChange={resize} onKeyDown={handleKeyDown} placeholder={`Message ${technician.name}…`} aria-label={`Message ${technician.name}`} />
+        <button className="send-icon" disabled={!text.trim()} aria-label="Send message" title="Send message">
           <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" />
-            <path d="M6 12h16" />
+            <path d="M3.714 3.048a.498.498 0 0 0-.683.627l2.843 7.627a2 2 0 0 1 0 1.396l-2.842 7.627a.498.498 0 0 0 .682.627l18-8.5a.5.5 0 0 0 0-.904z" /><path d="M6 12h16" />
           </svg>
-        </button>}
+        </button>
       </div>
+      <div className="composer-footer"><span>Enter to send · Shift + Enter for a new line</span><span>{text.length}/2000</span></div>
     </form>
   </aside>
 }
